@@ -1,0 +1,116 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - run: nix flake check --accept-flake-config
+
+  release:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - run: >
+          nix build
+          .#trevstack-server-linux-amd64
+          .#trevstack-server-linux-arm64
+          .#trevstack-server-linux-arm
+          .#trevstack-server-windows-amd64
+          .#trevstack-server-darwin-amd64
+          .#trevstack-server-darwin-arm64
+
+      - uses: akkuman/gitea-release-action@v1
+        with:
+          files: |-
+            result*/bin/*
+
+  package:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ github.server_url }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.PAT }}
+
+      - name: Build & load images
+        run: |
+          nix build .#trevstack-server-linux-amd64-image && ./result | docker load
+          nix build .#trevstack-server-linux-arm64-image && ./result | docker load
+          nix build .#trevstack-server-linux-arm-image && ./result | docker load
+
+      - name: Set env
+        shell: bash
+        run: |
+          REGISTRY=$(basename ${{ github.server_url }})
+
+          NR=${{ github.repository }}
+          NAMESPACE="${NR%%/*}"
+          REPOSITORY="${NR##*/}"
+
+          TAG=${{ github.ref_name }}
+          VERSION=${TAG#v}
+
+          echo "REGISTRY=${REGISTRY}" >> $GITHUB_ENV
+          echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_ENV
+          echo "REPOSITORY=${REPOSITORY}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Push images
+        shell: bash
+        run: |
+          docker image tag $REPOSITORY:$VERSION-amd64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
+          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
+
+          docker image tag $REPOSITORY:$VERSION-arm64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
+          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
+
+          docker image tag $REPOSITORY:$VERSION-arm $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+
+      - name: Push manifest
+        shell: bash
+        run: |
+          docker manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm
+          docker manifest push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION
+
+          docker manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:latest \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm

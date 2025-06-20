@@ -1,0 +1,9 @@
+.env
+/docker-compose.*
+
+# Go
+/tmp/
+
+# Nix
+/result*
+/.direnv/

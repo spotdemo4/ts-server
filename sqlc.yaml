@@ -1,0 +1,14 @@
+version: "2"
+sql:
+  - engine: "sqlite"
+    queries: "db/queries"
+    schema: "db/schema.sql"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/sqlc"
+        emit_pointers_for_null_types: true
+    database:
+      uri: ${DATABASE_URL}
+    rules:
+      - sqlc/db-prepare

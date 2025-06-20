@@ -1,0 +1,66 @@
+name: update
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  runner:
+    runs-on: ubuntu-latest
+    outputs:
+      label: ${{ steps.runner.outputs.label }}
+    steps:
+      - name: Get runner
+        id: runner
+        run: |
+          runners=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: token ${{ secrets.PAT }}" "https://api.github.com/repos/${{ github.repository }}/actions/runners")
+          available=$(echo "$runners" | jq '.runners[] | select(.status == "online" and .labels[] .name == "self-hosted")')
+          if [ -n "$available" ]; then
+            echo "label=self-hosted" >> $GITHUB_OUTPUT
+          else
+            echo "label=ubuntu-latest" >> $GITHUB_OUTPUT
+          fi
+
+  update:
+    needs: runner
+    runs-on: ${{ needs.runner.outputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Setup git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - run: nix run .#update
+
+      - name: Create pull request
+        id: cpr
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: update
+          title: update
+          body: automatic update
+          commit-message: "chore: update"
+          token: ${{ secrets.PAT }}
+
+      - name: Enable Automerge
+        if: ${{ steps.cpr.outputs.pull-request-number }}
+        env:
+          GH_TOKEN: ${{ secrets.PAT }}
+        run: >
+          gh pr merge
+          --squash
+          --auto
+          --subject "chore: update"
+          "${{ steps.cpr.outputs.pull-request-number }}"

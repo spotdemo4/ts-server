@@ -1,0 +1,59 @@
+name: update
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Setup git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B update
+
+      - run: nix run .#update
+
+      - name: Create pull request
+        env:
+          PAT: ${{ secrets.PAT }}
+        run: |
+          if git diff --exit-code main origin/main; then
+            echo "No changes found!"
+            exit 0
+          fi
+
+          git push origin update --force
+
+          URL="${{ gitea.server_url }}"
+          REPO_OWNER_SLASH_NAME="${{ gitea.repository }}"
+
+          PRS=$(curl -s -X GET -H "Authorization: token $PAT" \
+            -H "Content-Type: application/json" \
+            "$URL/api/v1/repos/$REPO_OWNER_SLASH_NAME/pulls?state=open")
+          PR_UPDATE=$(echo "$PRS" | jq -cr '.[] | select( .title | contains("update") )')
+
+          if [ -z "$PR_UPDATE" ]; then
+            echo "Creating pull request"
+
+            PR_CREATE=$(curl -s -X POST -H "Authorization: token $PAT" \
+              -H "Content-Type: application/json" \
+              -d '{"title":"update","body":"automatic update","head":"update","base":"main"}' \
+              "$URL/api/v1/repos/$REPO_OWNER_SLASH_NAME/pulls")
+            PR_NUMBER=$(echo "$PR_CREATE" | jq -r '.number')
+
+            curl -s -X POST -H "Authorization: token $PAT" \
+              -H "Content-Type: application/json" \
+              -d '{"Do":"merge","merge_when_checks_succeed":true,"delete_branch_after_merge":true}' \
+              "$URL/api/v1/repos/$REPO_OWNER_SLASH_NAME/pulls/$PR_NUMBER/merge"
+          fi
