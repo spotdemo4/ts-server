@@ -37,9 +37,15 @@ jobs:
         with:
           arguments: ".#ci"
 
+      - uses: actions/create-github-app-token@v2
+        id: token
+        with:
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
       - name: Renovate
         env:
           RENOVATE_CONFIG_FILE: .github/renovate-global.json
-          RENOVATE_TOKEN: ${{ secrets.PAT }}
+          RENOVATE_TOKEN: ${{ steps.token.outputs.token }}
           LOG_LEVEL: debug
         run: renovate
