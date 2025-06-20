@@ -36,14 +36,14 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
+      - uses: nicknovitski/nix-develop@v1
+        with:
+          arguments: ".#ci"
+
       - name: Setup git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-      - uses: nicknovitski/nix-develop@v1
-        with:
-          arguments: ".#ci"
 
       - name: Update
         run: ./.scripts/update
