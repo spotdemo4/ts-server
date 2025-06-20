@@ -74,6 +74,7 @@ jobs:
           nix-options: --accept-flake-config
           token: ${{ steps.token.outputs.token }}
           pr-title: "fix(deps): update nix flake"
+          commit-msg: "fix(deps): update nix flake"
           git-author-name: "trenovate[bot]"
           git-author-email: "1433620+trenovate[bot]@users.noreply.github.com"
           git-committer-name: "trenovate[bot]"
