@@ -102,6 +102,23 @@
           touch $out
         '';
 
+      go = with pkgs;
+        buildGoModule {
+          inherit pname version;
+          src = ./.;
+          vendorHash = "sha256-vz3QqAlcaIDrnSjnA3qcSM3y5FznHqr5z9b/EVVdaUA=";
+          env.CGO_ENABLED = 0;
+
+          preBuild = ''
+            HOME=$PWD
+            cp -r ${trevstack-web.packages."${system}".default} client
+          '';
+
+          installPhase = ''
+            touch $out
+          '';
+        };
+
       lint = with pkgs;
         runCommandLocal "check-lint" {
           nativeBuildInputs = with pkgs; [
@@ -159,8 +176,8 @@
           env.CGO_ENABLED = 0;
 
           preBuild = ''
-            cp -r ${trevstack-web.packages."${system}".default} client
             HOME=$PWD
+            cp -r ${trevstack-web.packages."${system}".default} client
           '';
         };
 

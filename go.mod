@@ -1,4 +1,4 @@
-module github.com/spotdemo4/trevstack/server
+module github.com/spotdemo4/ts-server
 
 go 1.24.1
 
