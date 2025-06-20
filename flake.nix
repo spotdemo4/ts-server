@@ -93,7 +93,6 @@
         packages = with pkgs; [
           git
           nix-update
-          go
           renovate
         ];
       };

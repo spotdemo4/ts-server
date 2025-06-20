@@ -45,9 +45,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: DeterminateSystems/determinate-nix-action@main
+      - uses: DeterminateSystems/nix-installer-action@main
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - uses: nicknovitski/nix-develop@v1
+        with:
+          arguments: ".#ci"
 
       - run: nix flake check --accept-flake-config
 
@@ -59,7 +63,7 @@ jobs:
           git fetch --depth=1 origin "$GITHUB_HEAD_REF"
           git checkout -B "$GITHUB_HEAD_REF" "${{ github.event.pull_request.head.sha }}"
 
-          determinate-nixd fix hashes --auto-apply
+          nix-update --flake --version=skip default
 
           if ! git diff --quiet; then
             git config user.name "github-actions[bot]"
