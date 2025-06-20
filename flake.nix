@@ -114,7 +114,7 @@
         buildGoModule {
           inherit pname version;
           src = ./.;
-          vendorHash = "sha256-vz3QqAlcaIDrnSjnA3qcSM3y5FznHqr5z9b/EVVdaUA=";
+          vendorHash = "sha256-bY187EaMm+8HvFOG3L0OmPZz33XHs7n7oEwAE+tibQU=";
           env.CGO_ENABLED = 0;
 
           preBuild = ''
@@ -152,7 +152,7 @@
         server = pkgs.buildGoModule {
           inherit pname version;
           src = ./.;
-          vendorHash = "sha256-vz3QqAlcaIDrnSjnA3qcSM3y5FznHqr5z9b/EVVdaUA=";
+          vendorHash = "sha256-bY187EaMm+8HvFOG3L0OmPZz33XHs7n7oEwAE+tibQU=";
           env.CGO_ENABLED = 0;
 
           preBuild = ''
