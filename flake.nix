@@ -106,7 +106,10 @@
           ];
         } ''
           cd ${./.}
+          HOME=$PWD
+
           alejandra -c .
+
           touch $out
         '';
 
@@ -136,8 +139,11 @@
           ];
         } ''
           cd ${./.}
+          HOME=$PWD
+
           revive -config revive.toml -set_exit_status ./...
           sqlfluff lint
+
           touch $out
         '';
     });
