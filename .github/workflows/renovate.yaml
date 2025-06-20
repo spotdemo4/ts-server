@@ -47,5 +47,6 @@ jobs:
         env:
           RENOVATE_CONFIG_FILE: .github/renovate-global.json
           RENOVATE_TOKEN: ${{ steps.token.outputs.token }}
+          RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.PAT }}
           LOG_LEVEL: debug
         run: renovate
