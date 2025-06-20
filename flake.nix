@@ -119,6 +119,7 @@
           pname = "check-go";
           inherit version;
           src = ./.;
+          goSum = ./go.sum;
           vendorHash = "sha256-bY187EaMm+8HvFOG3L0OmPZz33XHs7n7oEwAE+tibQU=";
           env.CGO_ENABLED = 0;
 
@@ -160,6 +161,7 @@
         server = pkgs.buildGoModule {
           inherit pname version;
           src = ./.;
+          goSum = ./go.sum;
           vendorHash = "sha256-bY187EaMm+8HvFOG3L0OmPZz33XHs7n7oEwAE+tibQU=";
           env.CGO_ENABLED = 0;
 
