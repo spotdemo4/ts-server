@@ -62,8 +62,8 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - uses: actions/create-github-app-token@v2
-        id: token
+      - uses: spotdemo4/setup-git-app-user@v2
+        id: user
         with:
           app-id: ${{ vars.CLIENT_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
@@ -75,10 +75,10 @@ jobs:
           token: ${{ steps.token.outputs.token }}
           pr-title: "fix(deps): update nix flake"
           commit-msg: "fix(deps): update nix flake"
-          git-author-name: "trenovate[bot]"
-          git-author-email: "1433620+trenovate[bot]@users.noreply.github.com"
-          git-committer-name: "trenovate[bot]"
-          git-committer-email: "1433620+trenovate[bot]@users.noreply.github.com"
+          git-author-name: ${{ steps.user.outputs.name }}
+          git-author-email: ${{ steps.user.outputs.email }}
+          git-committer-name: ${{ steps.user.outputs.name }}
+          git-committer-email: ${{ steps.user.outputs.email }}
 
       - name: Enable automerge
         if: ${{ steps.update.outputs.pull-request-number }}
