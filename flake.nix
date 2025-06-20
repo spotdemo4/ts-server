@@ -88,6 +88,14 @@
           protoc-gen-connect-go
         ];
       };
+
+      ci = pkgs.mkShell {
+        packages = with pkgs; [
+          git
+          nix-update
+          go
+        ];
+      };
     });
 
     checks = forSystem ({pkgs, ...}: {
@@ -131,34 +139,6 @@
           sqlfluff lint
           touch $out
         '';
-    });
-
-    apps = forSystem ({pkgs, ...}: {
-      update = {
-        type = "app";
-        program = pkgs.lib.getExe (pkgs.writeShellApplication {
-          name = "update";
-          runtimeInputs = with pkgs; [
-            git
-            nix
-            nix-update
-            go
-          ];
-          text = builtins.readFile ./.scripts/update;
-        });
-      };
-
-      bump = {
-        type = "app";
-        program = pkgs.lib.getExe (pkgs.writeShellApplication {
-          name = "bump";
-          runtimeInputs = with pkgs; [
-            git
-            nix-update
-          ];
-          text = builtins.readFile ./.scripts/bump;
-        });
-      };
     });
 
     formatter = forSystem ({pkgs, ...}: pkgs.alejandra);

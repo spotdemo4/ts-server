@@ -41,7 +41,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - run: nix run .#update
+      - uses: nicknovitski/nix-develop@v1
+        with:
+          arguments: ".#ci"
+
+      - name: Update
+        run: ./.scripts/update
 
       - name: Create pull request
         id: cpr
