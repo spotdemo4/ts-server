@@ -6,13 +6,12 @@ on:
       - main
   pull_request:
 
-permissions:
-  contents: write
-  actions: write
-
 jobs:
   skip:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
