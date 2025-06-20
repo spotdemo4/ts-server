@@ -72,7 +72,7 @@ jobs:
         id: update
         with:
           nix-options: --accept-flake-config
-          token: ${{ steps.token.outputs.token }}
+          token: ${{ steps.user.outputs.token }}
           pr-title: "fix(deps): update nix flake"
           commit-msg: "fix(deps): update nix flake"
           git-author-name: ${{ steps.user.outputs.name }}
