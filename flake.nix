@@ -94,6 +94,7 @@
           git
           nix-update
           go
+          renovate
         ];
       };
     });
