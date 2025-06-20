@@ -92,6 +92,7 @@
       ci = pkgs.mkShell {
         packages = with pkgs; [
           git
+          go
           nix-update
           renovate
         ];
