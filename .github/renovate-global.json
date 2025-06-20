@@ -17,6 +17,10 @@
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
+    },
+    {
+      "matchPackageNames": ["https://github.com/NixOS/nixpkgs**"],
+      "token": null
     }
   ]
 }
