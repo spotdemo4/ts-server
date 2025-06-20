@@ -44,6 +44,8 @@ jobs:
     runs-on: ${{ needs.runner.outputs.label }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
 
       - uses: DeterminateSystems/nix-installer-action@main
 
@@ -69,7 +71,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add --update --ignore-removal .
-            git commit -m "[dependabot skip] Automatically fix Nix hashes"
+            git commit -m "Automatically fix Nix hashes"
             git push origin "$GITHUB_HEAD_REF"
           fi
 
