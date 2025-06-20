@@ -9,6 +9,9 @@
   "nix": {
     "enabled": true
   },
+  "lockFileMaintenance": {
+    "enabled": true
+  },
   "repositories": ["spotdemo4/ts-server"],
   "extends": ["config:recommended"],
   "packageRules": [
