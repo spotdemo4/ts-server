@@ -49,4 +49,5 @@ jobs:
           RENOVATE_TOKEN: ${{ steps.token.outputs.token }}
           RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.READONLY }}
           LOG_LEVEL: debug
+          GITHUB_TOKEN: ${{ secrets.READONLY }}
         run: renovate
