@@ -5,9 +5,6 @@
   "onboarding": false,
   "requireConfig": "optional",
   "platform": "github",
-  "nix": {
-    "enabled": true
-  },
   "lockFileMaintenance": {
     "enabled": true
   },
@@ -17,10 +14,6 @@
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
-    },
-    {
-      "matchPackageNames": ["https://github.com/NixOS/nixpkgs**"],
-      "token": null
     }
   ]
 }

@@ -1,4 +1,4 @@
-name: renovate
+name: update
 
 on:
   schedule:
@@ -49,3 +49,37 @@ jobs:
           RENOVATE_TOKEN: ${{ steps.token.outputs.token }}
           LOG_LEVEL: debug
         run: renovate
+
+  flake:
+    needs: renovate
+    runs-on: ${{ needs.runner.outputs.label }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - uses: actions/create-github-app-token@v2
+        id: token
+        with:
+          app-id: ${{ vars.CLIENT_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+
+      - uses: DeterminateSystems/update-flake-lock@main
+        id: update
+        with:
+          nix-options: --accept-flake-config
+          token: ${{ steps.token.outputs.token }}
+          pr-title: "fix(deps): update nix flake"
+
+      - name: Enable automerge
+        if: ${{ steps.update.outputs.pull-request-number }}
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: >
+          gh pr merge
+          --squash
+          --auto
+          --subject "fix(deps): update nix flake"
+          "${{ steps.update.outputs.pull-request-number }}"
