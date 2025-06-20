@@ -120,7 +120,7 @@
           inherit version;
           src = ./.;
           goSum = ./go.sum;
-          vendorHash = "sha256-bY187EaMm+8HvFOG3L0OmPZz33XHs7n7oEwAE+tibQU=";
+          vendorHash = "sha256-HvFPzSqk6ka4NN9OPAAL/9YaPXqq2gQuxRkMiJnPwgI=";
           env.CGO_ENABLED = 0;
 
           preBuild = ''
@@ -162,7 +162,7 @@
           inherit pname version;
           src = ./.;
           goSum = ./go.sum;
-          vendorHash = "sha256-bY187EaMm+8HvFOG3L0OmPZz33XHs7n7oEwAE+tibQU=";
+          vendorHash = "sha256-HvFPzSqk6ka4NN9OPAAL/9YaPXqq2gQuxRkMiJnPwgI=";
           env.CGO_ENABLED = 0;
 
           preBuild = ''
