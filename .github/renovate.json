@@ -6,6 +6,6 @@
   "onboarding": false,
   "requireConfig": "optional",
   "platform": "github",
-  "repositories": [],
+  "repositories": ["spotdemo4/ts-server"],
   "extends": ["config:recommended"]
 }
