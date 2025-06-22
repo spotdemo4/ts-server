@@ -2,76 +2,69 @@ name: check
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
   pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
 
 jobs:
   skip:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       actions: write
     outputs:
       should_skip: ${{ steps.skip_check.outputs.should_skip }}
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
+
       - name: Check for duplicate runs
         id: skip_check
-        uses: fkirc/skip-duplicate-actions@v5
+        uses: fkirc/skip-duplicate-actions@f75f66ce1886f00957d99748a42c724f4330bdcf # v5.3.1
 
-  runner:
+  check:
     needs: skip
     if: ${{ needs.skip.outputs.should_skip != 'true' }}
     runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.runner.outputs.label }}
     steps:
-      - name: Get runner
-        id: runner
-        run: |
-          runners=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: token ${{ secrets.PAT }}" "https://api.github.com/repos/${{ github.repository }}/actions/runners")
-          available=$(echo "$runners" | jq '.runners[] | select(.status == "online" and .labels[] .name == "self-hosted")')
-          if [ -n "$available" ]; then
-            echo "label=self-hosted" >> $GITHUB_OUTPUT
-          else
-            echo "label=ubuntu-latest" >> $GITHUB_OUTPUT
-          fi
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
 
-  check:
-    needs: runner
-    runs-on: ${{ needs.runner.outputs.label }}
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: DeterminateSystems/nix-installer-action@999d616271516551cacca0c8b34a02e94d4f79e8 # main
+      - uses: DeterminateSystems/magic-nix-cache-action@06b5f8a297d878c1f072bffc3d5b74fa93e192ab # main
+
+      - run: nix flake check --accept-flake-config
+
+  hash:
+    needs: [skip, check]
+    if: ${{ failure() && github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
+        with:
+          egress-policy: audit
 
-      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: DeterminateSystems/nix-installer-action@999d616271516551cacca0c8b34a02e94d4f79e8 # main
+      - uses: DeterminateSystems/magic-nix-cache-action@06b5f8a297d878c1f072bffc3d5b74fa93e192ab # main
 
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix develop .#ci --command nix-update --flake --version=skip default
 
-      - uses: spotdemo4/setup-git-app-user@v2
+      - uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
+        id: token
         with:
           app-id: ${{ vars.CLIENT_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
 
-      - uses: nicknovitski/nix-develop@v1
+      - uses: suzuki-shunsuke/commit-action@e3299afe2e5ffb76f1987743e3dbc0f00ece72d8 # v0.0.8
         with:
-          arguments: ".#ci"
-
-      - run: nix flake check --accept-flake-config
-
-      - name: Fix hash mismatches
-        if: ${{ failure() && github.event_name == 'pull_request' }}
-        run: |
-          git stash --include-untracked
-          git fetch --depth=1 origin "$GITHUB_HEAD_REF"
-          git checkout -B "$GITHUB_HEAD_REF" "${{ github.event.pull_request.head.sha }}"
-
-          nix-update --flake --version=skip default
-
-          if ! git diff --quiet; then
-            git add --update --ignore-removal .
-            git commit -m "fix(deps): update nix hash"
-            git push origin "$GITHUB_HEAD_REF"
-          fi
-
-          git checkout -
-          git stash pop || true
+          github_token: ${{ steps.token.outputs.token }}
+          commit_message: "fix(deps): update nix hash"

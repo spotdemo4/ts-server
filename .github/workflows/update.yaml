@@ -2,91 +2,70 @@ name: update
 
 on:
   schedule:
-    - cron: "0 0 * * *"
-    - cron: "30 0 * * *"
+    - cron: "0/30 * * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  runner:
-    runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.runner.outputs.label }}
-    steps:
-      - name: Get runner
-        id: runner
-        run: |
-          runners=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: token ${{ secrets.PAT }}" "https://api.github.com/repos/${{ github.repository }}/actions/runners")
-          available=$(echo "$runners" | jq '.runners[] | select(.status == "online" and .labels[] .name == "self-hosted")')
-          if [ -n "$available" ]; then
-            echo "label=self-hosted" >> $GITHUB_OUTPUT
-          else
-            echo "label=ubuntu-latest" >> $GITHUB_OUTPUT
-          fi
-
   renovate:
-    needs: runner
-    runs-on: ${{ needs.runner.outputs.label }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: DeterminateSystems/nix-installer-action@main
-
-      - uses: DeterminateSystems/magic-nix-cache-action@main
-
-      - uses: nicknovitski/nix-develop@v1
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
-          arguments: ".#ci"
+          egress-policy: audit
 
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: DeterminateSystems/nix-installer-action@999d616271516551cacca0c8b34a02e94d4f79e8 # main
+      - uses: DeterminateSystems/magic-nix-cache-action@06b5f8a297d878c1f072bffc3d5b74fa93e192ab # main
+
+      - uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
         id: token
         with:
           app-id: ${{ vars.CLIENT_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
 
       - name: Renovate
-        env:
-          RENOVATE_CONFIG_FILE: .github/renovate-global.json
-          RENOVATE_TOKEN: ${{ steps.token.outputs.token }}
-          LOG_LEVEL: debug
-        run: renovate
+        uses: renovatebot/github-action@13f127373fd3dc43b41b0979e37ba570d6c2b8f4 # v43.0.0
+        with:
+          configurationFile: .github/renovate-global.json
+          token: ${{ steps.token.outputs.token }}
 
   flake:
-    needs: runner
-    runs-on: ${{ needs.runner.outputs.label }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: DeterminateSystems/nix-installer-action@main
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@002fdce3c6a235733a90a27c80493a3241e56863 # v2.12.1
         with:
-          reinstall: true
+          egress-policy: audit
 
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: DeterminateSystems/nix-installer-action@999d616271516551cacca0c8b34a02e94d4f79e8 # main
+      - uses: DeterminateSystems/magic-nix-cache-action@06b5f8a297d878c1f072bffc3d5b74fa93e192ab # main
 
-      - uses: spotdemo4/setup-git-app-user@v2
-        id: user
+      - run: nix flake update --accept-flake-config
+
+      - uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
+        id: token
         with:
           app-id: ${{ vars.CLIENT_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
 
-      - uses: DeterminateSystems/update-flake-lock@main
-        id: update
+      - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.8
+        id: pr
         with:
-          nix-options: --accept-flake-config
-          token: ${{ steps.user.outputs.token }}
-          pr-title: "fix(deps): update nix flake"
-          commit-msg: "fix(deps): update nix flake"
-          git-author-name: ${{ steps.user.outputs.name }}
-          git-author-email: ${{ steps.user.outputs.email }}
-          git-committer-name: ${{ steps.user.outputs.name }}
-          git-committer-email: ${{ steps.user.outputs.email }}
+          token: ${{ steps.token.outputs.token }}
+          sign-commits: true
+          commit-message: "chore(deps): update nix flake"
+          title: "chore(deps): update nix flake"
 
       - name: Enable automerge
-        if: ${{ steps.update.outputs.pull-request-number }}
+        if: ${{ steps.pr.outputs.pull-request-number }}
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
         run: >
-          gh pr merge
-          --squash
-          --auto
-          --subject "fix(deps): update nix flake"
-          "${{ steps.update.outputs.pull-request-number }}"
+          gh pr merge --squash --auto
+          --subject "chore(deps): update nix flake"
+          ${{ steps.pr.outputs.pull-request-number }}

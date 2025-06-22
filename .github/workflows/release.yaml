@@ -2,29 +2,14 @@ name: release
 
 on:
   push:
-    tags:
-      - "*"
+    tags: ["*"]
+
+permissions:
+  contents: read
 
 jobs:
-  runner:
-    runs-on: ubuntu-latest
-    outputs:
-      label: ${{ steps.runner.outputs.label }}
-    steps:
-      - name: Get runner
-        id: runner
-        run: |
-          runners=$(curl -s -H "Accept: application/vnd.github+json" -H "Authorization: token ${{ secrets.PAT }}" "https://api.github.com/repos/${{ github.repository }}/actions/runners")
-          available=$(echo "$runners" | jq '.runners[] | select(.status == "online" and .labels[] .name == "self-hosted")')
-          if [ -n "$available" ]; then
-            echo "label=self-hosted" >> $GITHUB_OUTPUT
-          else
-            echo "label=ubuntu-latest" >> $GITHUB_OUTPUT
-          fi
-
   check:
-    needs: runner
-    runs-on: ${{ needs.runner.outputs.label }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -36,7 +21,7 @@ jobs:
 
   release:
     needs: check
-    runs-on: ${{ needs.runner.outputs.label }}
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
@@ -63,7 +48,7 @@ jobs:
 
   package:
     needs: check
-    runs-on: ${{ needs.runner.outputs.label }}
+    runs-on: ubuntu-latest
     permissions:
       packages: write
     steps:
