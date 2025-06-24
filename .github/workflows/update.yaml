@@ -21,6 +21,10 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@b336b210d0cb834c37359adfc085c405d31b78b8 # main
       - uses: DeterminateSystems/magic-nix-cache-action@06b5f8a297d878c1f072bffc3d5b74fa93e192ab # main
 
+      - uses: nicknovitski/nix-develop@9be7cfb4b10451d3390a75dc18ad0465bed4932a # v1.2.1
+        with:
+          arguments: ".#ci"
+
       - uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
         id: token
         with:
@@ -28,10 +32,10 @@ jobs:
           private-key: ${{ secrets.PRIVATE_KEY }}
 
       - name: Renovate
-        uses: renovatebot/github-action@248bf5a619694187930adc80b9343c37761c173f # v43.0.1
-        with:
-          configurationFile: .github/renovate-global.json
-          token: ${{ steps.token.outputs.token }}
+        env:
+          RENOVATE_CONFIG_FILE: .github/renovate-global.json
+          RENOVATE_TOKEN: ${{ steps.token.outputs.token }}
+        run: renovate
 
   flake:
     runs-on: ubuntu-latest

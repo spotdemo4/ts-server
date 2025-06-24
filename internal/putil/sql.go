@@ -1,11 +1,27 @@
 package putil
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+func Null[T any](a *T) *sql.Null[T] {
+	if a == nil {
+		n := sql.Null[T]{
+			Valid: false,
+		}
+		return &n
+	}
+
+	n := sql.Null[T]{
+		V:     *a,
+		Valid: true,
+	}
+	return &n
+}
 
 func NullLike(s *string) *string {
 	if s == nil {

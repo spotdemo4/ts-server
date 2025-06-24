@@ -11,6 +11,18 @@
 		{
 			"matchUpdateTypes": ["minor", "patch", "pin", "digest"],
 			"automerge": true
+		},
+		{
+			"matchManagers": ["git-submodules"],
+			"postUpgradeTasks": {
+				"commands": ["buf generate", "nix-update --flake --version=skip default"]
+			}
+		},
+		{
+			"matchManagers": ["gomod"],
+			"postUpgradeTasks": {
+				"commands": ["nix-update --flake --version=skip default"]
+			}
 		}
 	]
 }

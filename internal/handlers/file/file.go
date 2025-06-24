@@ -7,17 +7,19 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spotdemo4/ts-server/internal/auth"
 	"github.com/spotdemo4/ts-server/internal/interceptors"
-	"github.com/spotdemo4/ts-server/internal/sqlc"
+	"github.com/spotdemo4/ts-server/internal/models"
+	"github.com/stephenafamo/bob"
 )
 
 type FileHandler struct {
-	db  *sqlc.Queries
-	key []byte
+	db   *bob.DB
+	auth *auth.Auth
 }
 
 func (h *FileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	userid, ok := interceptors.GetUserContext(r.Context())
+	user, ok := h.auth.GetContext(r.Context())
 	if !ok {
 		http.Redirect(w, r, "/auth", http.StatusFound)
 		return
@@ -35,17 +37,17 @@ func (h *FileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/auth", http.StatusFound)
 		return
 	}
-	id, err := strconv.Atoi(pathItems[2])
+	id, err := strconv.ParseInt(pathItems[2], 10, 32)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
-	// Get the file from the database
-	file, err := h.db.GetFile(r.Context(), sqlc.GetFileParams{
-		ID:     int64(id),
-		UserID: userid,
-	})
+	// Get file from db
+	file, err := models.Files.Query(
+		models.SelectWhere.Files.ID.EQ(int32(id)),
+		models.SelectWhere.Files.UserID.EQ(user.ID),
+	).One(r.Context(), h.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "Not Found", http.StatusNotFound)
@@ -59,12 +61,12 @@ func (h *FileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Write(file.Data)
 }
 
-func NewFileHandler(db *sqlc.Queries, key string) http.Handler {
+func NewFileHandler(db *bob.DB, auth *auth.Auth) http.Handler {
 	return interceptors.WithAuthRedirect(
 		&FileHandler{
-			db:  db,
-			key: []byte(key),
+			db:   db,
+			auth: auth,
 		},
-		key,
+		auth,
 	)
 }
