@@ -37,7 +37,7 @@ func (h *FileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/auth", http.StatusFound)
 		return
 	}
-	id, err := strconv.Atoi(pathItems[2])
+	id, err := strconv.ParseInt(pathItems[2], 10, 32)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

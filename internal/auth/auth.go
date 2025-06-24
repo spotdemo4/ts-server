@@ -118,7 +118,7 @@ func (a *Auth) GetUserFromToken(tokenString string) (User, error) {
 		return User{}, errors.New("could not parse claims")
 	}
 
-	userid, err := strconv.Atoi(claims.ID)
+	userid, err := strconv.ParseInt(claims.ID, 10, 32)
 	if err != nil {
 		return User{}, errors.New("invalid id")
 	}
