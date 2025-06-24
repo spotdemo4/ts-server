@@ -20,7 +20,7 @@ jobs:
 
       - uses: DeterminateSystems/nix-installer-action@41e0dcf2158a3d6eefca89332cc236df1733e8a7 # main
 
-      - uses: DeterminateSystems/magic-nix-cache-action@06b5f8a297d878c1f072bffc3d5b74fa93e192ab # main
+      - uses: DeterminateSystems/magic-nix-cache-action@c0c6b9d733df5076e8d432190384f659fc78ae76 # main
 
       - run: nix flake check --accept-flake-config
 
@@ -39,7 +39,7 @@ jobs:
 
       - uses: DeterminateSystems/nix-installer-action@41e0dcf2158a3d6eefca89332cc236df1733e8a7 # main
 
-      - uses: DeterminateSystems/magic-nix-cache-action@06b5f8a297d878c1f072bffc3d5b74fa93e192ab # main
+      - uses: DeterminateSystems/magic-nix-cache-action@c0c6b9d733df5076e8d432190384f659fc78ae76 # main
 
       - run: >
           nix build
@@ -71,7 +71,7 @@ jobs:
 
       - uses: DeterminateSystems/nix-installer-action@41e0dcf2158a3d6eefca89332cc236df1733e8a7 # main
 
-      - uses: DeterminateSystems/magic-nix-cache-action@06b5f8a297d878c1f072bffc3d5b74fa93e192ab # main
+      - uses: DeterminateSystems/magic-nix-cache-action@c0c6b9d733df5076e8d432190384f659fc78ae76 # main
 
       - uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
