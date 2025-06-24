@@ -14,17 +14,19 @@ import (
 	"syscall"
 	"time"
 
+	"connectrpc.com/connect"
 	"connectrpc.com/validate"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/joho/godotenv"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
+	"github.com/spotdemo4/ts-server/internal/auth"
 	"github.com/spotdemo4/ts-server/internal/database"
 	"github.com/spotdemo4/ts-server/internal/handlers/client"
 	"github.com/spotdemo4/ts-server/internal/handlers/file"
-	"github.com/spotdemo4/ts-server/internal/handlers/item/v1"
-	"github.com/spotdemo4/ts-server/internal/handlers/user/v1"
+	itemv1 "github.com/spotdemo4/ts-server/internal/handlers/item/v1"
+	userv1 "github.com/spotdemo4/ts-server/internal/handlers/user/v1"
 	"github.com/spotdemo4/ts-server/internal/interceptors"
 )
 
@@ -47,7 +49,7 @@ func main() {
 	}
 
 	// Get database
-	sqlc, db, err := database.New(env.DatabaseURL)
+	db, err := database.New(env.DatabaseURL)
 	if err != nil {
 		log.Fatalf("failed to connect to database: %s", err.Error())
 	}
@@ -62,6 +64,15 @@ func main() {
 		log.Fatalf("failed to create webauthn: %s", err.Error())
 	}
 
+	// Create auth service
+	auth := auth.New(db, name, env.Key)
+
+	// Create auth interceptor
+	ai := interceptors.NewAuthInterceptor(auth)
+
+	// Create rate limit interceptor
+	ri := interceptors.NewRateLimitInterceptor()
+
 	// Create validate interceptor
 	vi, err := validate.NewInterceptor()
 	if err != nil {
@@ -70,14 +81,14 @@ func main() {
 
 	// Serve gRPC Handlers
 	api := http.NewServeMux()
-	api.Handle(interceptors.WithCORS(user.NewAuthHandler(vi, sqlc, webAuthn, name, env.Key)))
-	api.Handle(interceptors.WithCORS(user.NewHandler(vi, sqlc, webAuthn, name, env.Key)))
-	api.Handle(interceptors.WithCORS(item.NewHandler(vi, sqlc, env.Key)))
+	api.Handle(interceptors.WithCORS(userv1.New(db, auth, webAuthn, connect.WithInterceptors(vi, ai))))
+	api.Handle(interceptors.WithCORS(userv1.NewAuth(db, auth, webAuthn, connect.WithInterceptors(vi, ri))))
+	api.Handle(interceptors.WithCORS(itemv1.NewHandler(db, auth, connect.WithInterceptors(vi, ai))))
 
 	// Serve web interface
 	mux := http.NewServeMux()
-	mux.Handle("/", client.NewClientHandler(env.Key, ClientFS))
-	mux.Handle("/file/", file.NewFileHandler(sqlc, env.Key))
+	mux.Handle("/", client.NewClientHandler(auth, ClientFS))
+	mux.Handle("/file/", file.NewFileHandler(db, auth))
 	mux.Handle("/grpc/", http.StripPrefix("/grpc", api))
 
 	// Start server

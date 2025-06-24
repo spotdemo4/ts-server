@@ -5,29 +5,37 @@ import (
 
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/spotdemo4/ts-server/internal/sqlc"
+	"github.com/spotdemo4/ts-server/internal/models"
 )
 
-func NewCreds(creds []sqlc.Credential) []webauthn.Credential {
+func NewCreds(creds models.CredentialSlice) []webauthn.Credential {
 	webauthnCreds := []webauthn.Credential{}
 
 	for _, c := range creds {
 		transports := []protocol.AuthenticatorTransport{}
-		if c.Transports != nil {
-			for t := range strings.SplitSeq(*c.Transports, " ") {
+		if c.Transports.Valid {
+			for t := range strings.SplitSeq(c.Transports.V, " ") {
 				transports = append(transports, protocol.AuthenticatorTransport(t))
 			}
 		}
 
 		flags := webauthn.CredentialFlags{}
-		if c.UserVerified != nil {
-			flags.UserVerified = *c.UserVerified
+		if c.UserVerified.Valid {
+			flags.UserVerified = c.UserVerified.V
 		}
-		if c.BackupEligible != nil {
-			flags.BackupEligible = *c.BackupEligible
+		if c.BackupEligible.Valid {
+			flags.BackupEligible = c.BackupEligible.V
 		}
-		if c.BackupState != nil {
-			flags.BackupState = *c.BackupState
+		if c.BackupState.Valid {
+			flags.BackupState = c.BackupState.V
+		}
+
+		attestation := webauthn.CredentialAttestation{}
+		if c.AttestationObject.Valid {
+			attestation.Object = c.AttestationObject.V
+		}
+		if c.AttestationClientData.Valid {
+			attestation.ClientDataJSON = c.AttestationClientData.V
 		}
 
 		webauthnCreds = append(webauthnCreds, webauthn.Credential{
@@ -36,12 +44,9 @@ func NewCreds(creds []sqlc.Credential) []webauthn.Credential {
 			Authenticator: webauthn.Authenticator{
 				SignCount: uint32(c.SignCount),
 			},
-			Transport: transports,
-			Flags:     flags,
-			Attestation: webauthn.CredentialAttestation{
-				Object:         c.AttestationObject,
-				ClientDataJSON: c.AttestationClientData,
-			},
+			Transport:   transports,
+			Flags:       flags,
+			Attestation: attestation,
 		})
 	}
 

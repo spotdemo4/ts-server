@@ -501,8 +501,8 @@ const file_user_v1_auth_proto_rawDesc = "" +
 	"\x06SignUp\x12\x16.user.v1.SignUpRequest\x1a\x17.user.v1.SignUpResponse\"\x00\x12;\n" +
 	"\x06Logout\x12\x16.user.v1.LogoutRequest\x1a\x17.user.v1.LogoutResponse\"\x00\x12\\\n" +
 	"\x11BeginPasskeyLogin\x12!.user.v1.BeginPasskeyLoginRequest\x1a\".user.v1.BeginPasskeyLoginResponse\"\x00\x12_\n" +
-	"\x12FinishPasskeyLogin\x12\".user.v1.FinishPasskeyLoginRequest\x1a#.user.v1.FinishPasskeyLoginResponse\"\x00B\x9c\x01\n" +
-	"\vcom.user.v1B\tAuthProtoP\x01ZEgithub.com/spotdemo4/ts-server/internal/connect/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
+	"\x12FinishPasskeyLogin\x12\".user.v1.FinishPasskeyLoginRequest\x1a#.user.v1.FinishPasskeyLoginResponse\"\x00B\x95\x01\n" +
+	"\vcom.user.v1B\tAuthProtoP\x01Z>github.com/spotdemo4/ts-server/internal/connect/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
 	file_user_v1_auth_proto_rawDescOnce sync.Once

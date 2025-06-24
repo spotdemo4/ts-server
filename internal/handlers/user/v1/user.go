@@ -2,103 +2,63 @@ package user
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"sync"
 	"time"
 
 	"connectrpc.com/connect"
-	"connectrpc.com/validate"
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/spotdemo4/ts-server/internal/auth"
 	userv1 "github.com/spotdemo4/ts-server/internal/connect/user/v1"
 	"github.com/spotdemo4/ts-server/internal/connect/user/v1/userv1connect"
-	"github.com/spotdemo4/ts-server/internal/interceptors"
+	"github.com/spotdemo4/ts-server/internal/models"
 	"github.com/spotdemo4/ts-server/internal/putil"
-	"github.com/spotdemo4/ts-server/internal/sqlc"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/stephenafamo/bob"
 )
 
-func userToConnect(item sqlc.User) *userv1.User {
-	return &userv1.User{
-		Id:               item.ID,
-		Username:         item.Username,
-		ProfilePictureId: item.ProfilePictureID,
-	}
-}
-
 type Handler struct {
-	db       *sqlc.Queries
+	db       *bob.DB
 	webAuthn *webauthn.WebAuthn
-	key      []byte
-	name     string
+	auth     *auth.Auth
 
-	sessions *map[int64]*webauthn.SessionData
+	sessions *map[int32]*webauthn.SessionData
 	mu       sync.Mutex
 }
 
 func (h *Handler) GetUser(ctx context.Context, _ *connect.Request[userv1.GetUserRequest]) (*connect.Response[userv1.GetUserResponse], error) {
-	userid, ok := interceptors.GetUserContext(ctx)
+	user, ok := h.auth.GetContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
+		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
-	// Get user
-	user, err := h.db.GetUser(ctx, userid)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
-
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	res := connect.NewResponse(&userv1.GetUserResponse{
-		User: userToConnect(user),
-	})
-	return res, nil
+	return connect.NewResponse(&userv1.GetUserResponse{
+		User: &userv1.User{
+			Id:               user.ID,
+			Username:         user.Username,
+			ProfilePictureId: user.ProfilePictureInt(),
+		},
+	}), nil
 }
 
 func (h *Handler) UpdatePassword(ctx context.Context, req *connect.Request[userv1.UpdatePasswordRequest]) (*connect.Response[userv1.UpdatePasswordResponse], error) {
-	userid, ok := interceptors.GetUserContext(ctx)
+	user, ok := h.auth.GetContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
-	}
-
-	// Get user
-	user, err := h.db.GetUser(ctx, userid)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
-
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
 	// Validate
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Msg.OldPassword)); err != nil {
+	if !user.Validate(req.Msg.OldPassword) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid password"))
 	}
 	if req.Msg.NewPassword != req.Msg.ConfirmPassword {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("passwords do not match"))
 	}
 
-	// Hash password
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Msg.NewPassword), bcrypt.DefaultCost)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
 	// Update password
-	err = h.db.UpdateUser(ctx, sqlc.UpdateUserParams{
-		Password: putil.ToPointer(string(hash)),
-		ID:       userid,
-	})
+	err := user.SetPassword(ctx, req.Msg.NewPassword)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -108,52 +68,29 @@ func (h *Handler) UpdatePassword(ctx context.Context, req *connect.Request[userv
 }
 
 func (h *Handler) GetAPIKey(ctx context.Context, req *connect.Request[userv1.GetAPIKeyRequest]) (*connect.Response[userv1.GetAPIKeyResponse], error) {
-	userid, ok := interceptors.GetUserContext(ctx)
+	user, ok := h.auth.GetContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
-	}
-
-	// Get user
-	user, err := h.db.GetUser(ctx, userid)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
-
-		return nil, connect.NewError(connect.CodeInternal, err)
+		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
 	// Validate
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Msg.Password)); err != nil {
+	if !user.Validate(req.Msg.Password) {
 		return nil, connect.NewError(connect.CodePermissionDenied, errors.New("invalid username or password"))
 	}
 	if req.Msg.Password != req.Msg.ConfirmPassword {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("passwords do not match"))
 	}
 
-	// Generate JWT
-	t := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Issuer:  h.name,
-		Subject: strconv.FormatInt(user.ID, 10),
-		IssuedAt: &jwt.NumericDate{
-			Time: time.Now(),
-		},
-	})
-	ss, err := t.SignedString(h.key)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
 	res := connect.NewResponse(&userv1.GetAPIKeyResponse{
-		Key: ss,
+		Key: user.Token(time.Now().Add(time.Hour * 24)),
 	})
 	return res, nil
 }
 
 func (h *Handler) UpdateProfilePicture(ctx context.Context, req *connect.Request[userv1.UpdateProfilePictureRequest]) (*connect.Response[userv1.UpdateProfilePictureResponse], error) {
-	userid, ok := interceptors.GetUserContext(ctx)
+	user, ok := h.auth.GetContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
+		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
 	// Validate file
@@ -162,69 +99,32 @@ func (h *Handler) UpdateProfilePicture(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid file type"))
 	}
 
-	// Save bytes into file
-	fileID, err := h.db.InsertFile(ctx, sqlc.InsertFileParams{
-		Name:   req.Msg.FileName,
-		Data:   req.Msg.Data,
-		UserID: userid,
-	})
+	// Update profile picture
+	err := user.SetProfilePicture(ctx, req.Msg.FileName, req.Msg.Data)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	// Get user
-	user, err := h.db.GetUser(ctx, userid)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, connect.NewError(connect.CodeNotFound, err)
-		}
-
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	// Update user profile picture
-	err = h.db.UpdateUser(ctx, sqlc.UpdateUserParams{
-		// set
-		ProfilePictureID: &fileID,
-
-		// where
-		ID: userid,
-	})
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInternal, err)
-	}
-
-	// Delete old profile picture if exists
-	if user.ProfilePictureID != nil {
-		err = h.db.DeleteFile(ctx, sqlc.DeleteFileParams{
-			ID:     *user.ProfilePictureID,
-			UserID: userid,
-		})
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
-		}
 	}
 
 	res := connect.NewResponse(&userv1.UpdateProfilePictureResponse{
-		User: userToConnect(user),
+		User: &userv1.User{
+			Id:               user.ID,
+			Username:         user.Username,
+			ProfilePictureId: user.ProfilePictureInt(),
+		},
 	})
+	res.Header().Set("Set-Cookie", user.Cookie(time.Hour*8).String())
+
 	return res, nil
 }
 
 func (h *Handler) BeginPasskeyRegistration(ctx context.Context, _ *connect.Request[userv1.BeginPasskeyRegistrationRequest]) (*connect.Response[userv1.BeginPasskeyRegistrationResponse], error) {
-	userid, ok := interceptors.GetUserContext(ctx)
+	user, ok := h.auth.GetContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
-	}
-
-	// Get user
-	pUser, err := h.getPasskeyUser(ctx, userid)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
 	// Get options for user
-	options, session, err := h.webAuthn.BeginRegistration(pUser)
+	options, session, err := h.webAuthn.BeginRegistration(user)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -236,7 +136,7 @@ func (h *Handler) BeginPasskeyRegistration(ctx context.Context, _ *connect.Reque
 	}
 
 	// Set session for validation later
-	h.setSession(userid, session)
+	h.setSession(user.ID, session)
 
 	return connect.NewResponse(&userv1.BeginPasskeyRegistrationResponse{
 		OptionsJson: string(optionsJSON),
@@ -244,19 +144,13 @@ func (h *Handler) BeginPasskeyRegistration(ctx context.Context, _ *connect.Reque
 }
 
 func (h *Handler) FinishPasskeyRegistration(ctx context.Context, req *connect.Request[userv1.FinishPasskeyRegistrationRequest]) (*connect.Response[userv1.FinishPasskeyRegistrationResponse], error) {
-	userid, ok := interceptors.GetUserContext(ctx)
+	user, ok := h.auth.GetContext(ctx)
 	if !ok {
-		return nil, connect.NewError(connect.CodeUnauthenticated, errors.New("unauthenticated"))
-	}
-
-	// Get user
-	pUser, err := h.getPasskeyUser(ctx, userid)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
 	// Get the session data previously set
-	session, err := h.getSession(userid)
+	session, err := h.getSession(user.ID)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
@@ -268,28 +162,31 @@ func (h *Handler) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 	}
 
 	// Create the credential
-	credential, err := h.webAuthn.CreateCredential(pUser, *session, parsedResponse)
+	credential, err := h.webAuthn.CreateCredential(user, *session, parsedResponse)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 
+	// Turn transports into strings to save in db
 	transports := transportsToString(credential.Transport)
 
 	// Save the credential
-	err = h.db.InsertCredential(ctx, sqlc.InsertCredentialParams{
-		CredID:                string(credential.ID),
-		CredPublicKey:         credential.PublicKey,
-		SignCount:             int64(credential.Authenticator.SignCount),
-		Transports:            &transports,
-		UserVerified:          &credential.Flags.UserVerified,
-		BackupEligible:        &credential.Flags.BackupEligible,
-		BackupState:           &credential.Flags.BackupState,
-		AttestationObject:     credential.Attestation.Object,
-		AttestationClientData: credential.Attestation.ClientDataJSON,
-		CreatedAt:             time.Now(),
-		LastUsed:              time.Now(),
-		UserID:                userid,
-	})
+	_, err = models.Credentials.Insert(
+		&models.CredentialSetter{
+			CredID:                putil.ToPointer(string(credential.ID)),
+			CredPublicKey:         putil.ToPointer(credential.PublicKey),
+			SignCount:             putil.ToPointer(int32(credential.Authenticator.SignCount)),
+			Transports:            putil.Null(&transports),
+			UserVerified:          putil.Null(&credential.Flags.UserVerified),
+			BackupEligible:        putil.Null(&credential.Flags.BackupEligible),
+			BackupState:           putil.Null(&credential.Flags.BackupState),
+			AttestationObject:     putil.Null(&credential.Attestation.Object),
+			AttestationClientData: putil.Null(&credential.Attestation.ClientDataJSON),
+			CreatedAt:             putil.ToPointer(time.Now()),
+			LastUsed:              putil.ToPointer(time.Now()),
+			UserID:                &user.ID,
+		},
+	).Exec(ctx, h.db)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -297,24 +194,7 @@ func (h *Handler) FinishPasskeyRegistration(ctx context.Context, req *connect.Re
 	return connect.NewResponse(&userv1.FinishPasskeyRegistrationResponse{}), nil
 }
 
-func (h *Handler) getPasskeyUser(ctx context.Context, userid int64) (*auth.User, error) {
-	user, err := h.db.GetUser(ctx, userid)
-	if err != nil {
-		return nil, err
-	}
-
-	creds, err := h.db.GetCredentials(ctx, user.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	webCreds := auth.NewCreds(creds)
-	webUser := auth.NewUser(user.WebauthnID, user.Username, webCreds)
-
-	return &webUser, nil
-}
-
-func (h *Handler) getSession(userid int64) (*webauthn.SessionData, error) {
+func (h *Handler) getSession(userid int32) (*webauthn.SessionData, error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -327,7 +207,7 @@ func (h *Handler) getSession(userid int64) (*webauthn.SessionData, error) {
 	return session, nil
 }
 
-func (h *Handler) setSession(userid int64, data *webauthn.SessionData) {
+func (h *Handler) setSession(userid int32, data *webauthn.SessionData) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -342,16 +222,13 @@ func transportsToString(transports []protocol.AuthenticatorTransport) string {
 	return s
 }
 
-func NewHandler(vi *validate.Interceptor, db *sqlc.Queries, webauth *webauthn.WebAuthn, name string, key string) (string, http.Handler) {
-	interceptors := connect.WithInterceptors(vi, interceptors.NewAuthInterceptor(key))
-
-	sd := map[int64]*webauthn.SessionData{}
+func New(db *bob.DB, auth *auth.Auth, webauth *webauthn.WebAuthn, interceptors connect.Option) (string, http.Handler) {
+	sd := map[int32]*webauthn.SessionData{}
 	return userv1connect.NewUserServiceHandler(
 		&Handler{
 			db:       db,
 			webAuthn: webauth,
-			key:      []byte(key),
-			name:     name,
+			auth:     auth,
 
 			sessions: &sd,
 			mu:       sync.Mutex{},

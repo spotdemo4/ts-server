@@ -16,14 +16,12 @@ type visitor struct {
 }
 
 type RatelimitInterceptor struct {
-	key      string
 	visitors map[string]*visitor
 	mu       sync.Mutex
 }
 
-func NewRateLimitInterceptor(key string) *RatelimitInterceptor {
+func NewRateLimitInterceptor() *RatelimitInterceptor {
 	rl := &RatelimitInterceptor{
-		key:      key,
 		visitors: make(map[string]*visitor),
 		mu:       sync.Mutex{},
 	}

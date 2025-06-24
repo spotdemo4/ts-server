@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     trevstack-web = {
-      url = "github:spotdemo4/ts-web";
+      url = "github:spotdemo4/ts-web/v0.0.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -62,39 +62,63 @@
     ];
   in {
     devShells = forSystem ({pkgs, ...}: {
-      default = pkgs.mkShell {
+      default = let
+        bobgen = pkgs.buildGoModule {
+          name = "bobgen";
+          src = pkgs.fetchFromGitHub {
+            owner = "stephenafamo";
+            repo = "bob";
+            rev = "v0.38.0";
+            sha256 = "sha256-pIw+fFnkkYJMYoftxSBwBZzJkhYBLjknOENDibVjJk4=";
+          };
+          vendorHash = "sha256-iVYzRKIUrjR/pzlpUMtgaFBn5idd/TBsSZxh/SQGT0M=";
+          subPackages = [
+            "gen/bobgen-sql"
+          ];
+        };
+      in
+        pkgs.mkShell {
+          packages = with pkgs; [
+            git
+
+            # Nix
+            nix-update
+            alejandra
+
+            # Go
+            go
+            gotools
+            gopls
+            revive
+
+            # Database
+            sqlite
+            dbmate
+            sqlfluff
+            bobgen
+
+            # Protobuf
+            buf
+            protoc-gen-go
+            protoc-gen-connect-go
+          ];
+        };
+
+      ci = pkgs.mkShell {
         packages = with pkgs; [
           git
+          renovate
 
           # Nix
           nix-update
-          alejandra
 
           # Go
           go
-          gotools
-          gopls
-          revive
-          sqlc
-
-          # Database
-          sqlite
-          dbmate
-          sqlfluff
 
           # Protobuf
           buf
           protoc-gen-go
           protoc-gen-connect-go
-        ];
-      };
-
-      ci = pkgs.mkShell {
-        packages = with pkgs; [
-          git
-          go
-          nix-update
-          renovate
         ];
       };
     });
@@ -120,7 +144,7 @@
           inherit version;
           src = ./.;
           goSum = ./go.sum;
-          vendorHash = "sha256-HvFPzSqk6ka4NN9OPAAL/9YaPXqq2gQuxRkMiJnPwgI=";
+          vendorHash = "sha256-rcoA+DT2/al6pY1btCuC/ea2uX86cJ3+kQ8i8zQXi4Y=";
           env.CGO_ENABLED = 0;
 
           preBuild = ''
@@ -137,14 +161,31 @@
         runCommandLocal "check-lint" {
           nativeBuildInputs = with pkgs; [
             revive
-            sqlfluff
           ];
         } ''
           cd ${./.}
           HOME=$PWD
 
           revive -config revive.toml -set_exit_status ./...
+
+          touch $out
+        '';
+
+      db = with pkgs;
+        runCommandLocal "check-db" {
+          nativeBuildInputs = with pkgs; [
+            sqlite
+            sqlfluff
+            dbmate
+          ];
+        } ''
+          cd ${./.}
+          HOME=$PWD
+
           sqlfluff lint
+
+          export DATABASE_URL=sqlite:$TMP/check.db
+          dbmate up
 
           touch $out
         '';
@@ -162,7 +203,7 @@
           inherit pname version;
           src = ./.;
           goSum = ./go.sum;
-          vendorHash = "sha256-HvFPzSqk6ka4NN9OPAAL/9YaPXqq2gQuxRkMiJnPwgI=";
+          vendorHash = "sha256-rcoA+DT2/al6pY1btCuC/ea2uX86cJ3+kQ8i8zQXi4Y=";
           env.CGO_ENABLED = 0;
 
           preBuild = ''

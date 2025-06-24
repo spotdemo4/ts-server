@@ -23,9 +23,9 @@ const (
 
 type User struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
-	Id               int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id               int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Username         string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
-	ProfilePictureId *int64                 `protobuf:"varint,3,opt,name=profile_picture_id,json=profilePictureId,proto3,oneof" json:"profile_picture_id,omitempty"`
+	ProfilePictureId *int32                 `protobuf:"varint,3,opt,name=profile_picture_id,json=profilePictureId,proto3,oneof" json:"profile_picture_id,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -60,7 +60,7 @@ func (*User) Descriptor() ([]byte, []int) {
 	return file_user_v1_user_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *User) GetId() int64 {
+func (x *User) GetId() int32 {
 	if x != nil {
 		return x.Id
 	}
@@ -74,7 +74,7 @@ func (x *User) GetUsername() string {
 	return ""
 }
 
-func (x *User) GetProfilePictureId() int64 {
+func (x *User) GetProfilePictureId() int32 {
 	if x != nil && x.ProfilePictureId != nil {
 		return *x.ProfilePictureId
 	}
@@ -623,9 +623,9 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\n" +
 	"\x12user/v1/user.proto\x12\auser.v1\"|\n" +
 	"\x04User\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1a\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x121\n" +
-	"\x12profile_picture_id\x18\x03 \x01(\x03H\x00R\x10profilePictureId\x88\x01\x01B\x15\n" +
+	"\x12profile_picture_id\x18\x03 \x01(\x05H\x00R\x10profilePictureId\x88\x01\x01B\x15\n" +
 	"\x13_profile_picture_id\"\x10\n" +
 	"\x0eGetUserRequest\"4\n" +
 	"\x0fGetUserResponse\x12!\n" +
@@ -658,8 +658,8 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\tGetAPIKey\x12\x19.user.v1.GetAPIKeyRequest\x1a\x1a.user.v1.GetAPIKeyResponse\"\x00\x12e\n" +
 	"\x14UpdateProfilePicture\x12$.user.v1.UpdateProfilePictureRequest\x1a%.user.v1.UpdateProfilePictureResponse\"\x00\x12q\n" +
 	"\x18BeginPasskeyRegistration\x12(.user.v1.BeginPasskeyRegistrationRequest\x1a).user.v1.BeginPasskeyRegistrationResponse\"\x00\x12t\n" +
-	"\x19FinishPasskeyRegistration\x12).user.v1.FinishPasskeyRegistrationRequest\x1a*.user.v1.FinishPasskeyRegistrationResponse\"\x00B\x9c\x01\n" +
-	"\vcom.user.v1B\tUserProtoP\x01ZEgithub.com/spotdemo4/ts-server/internal/connect/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
+	"\x19FinishPasskeyRegistration\x12).user.v1.FinishPasskeyRegistrationRequest\x1a*.user.v1.FinishPasskeyRegistrationResponse\"\x00B\x95\x01\n" +
+	"\vcom.user.v1B\tUserProtoP\x01Z>github.com/spotdemo4/ts-server/internal/connect/user/v1;userv1\xa2\x02\x03UXX\xaa\x02\aUser.V1\xca\x02\aUser\\V1\xe2\x02\x13User\\V1\\GPBMetadata\xea\x02\bUser::V1b\x06proto3"
 
 var (
 	file_user_v1_user_proto_rawDescOnce sync.Once

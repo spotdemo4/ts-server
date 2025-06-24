@@ -25,7 +25,7 @@ const (
 
 type Item struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Added         *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=added,proto3" json:"added,omitempty"`
 	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
@@ -65,7 +65,7 @@ func (*Item) Descriptor() ([]byte, []int) {
 	return file_item_v1_item_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Item) GetId() int64 {
+func (x *Item) GetId() int32 {
 	if x != nil {
 		return x.Id
 	}
@@ -109,7 +109,7 @@ func (x *Item) GetQuantity() int32 {
 
 type GetItemRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -144,7 +144,7 @@ func (*GetItemRequest) Descriptor() ([]byte, []int) {
 	return file_item_v1_item_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *GetItemRequest) GetId() int64 {
+func (x *GetItemRequest) GetId() int32 {
 	if x != nil {
 		return x.Id
 	}
@@ -393,7 +393,7 @@ func (x *CreateItemRequest) GetQuantity() int32 {
 
 type CreateItemResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Added         *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=added,proto3" json:"added,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -429,7 +429,7 @@ func (*CreateItemResponse) Descriptor() ([]byte, []int) {
 	return file_item_v1_item_proto_rawDescGZIP(), []int{6}
 }
 
-func (x *CreateItemResponse) GetId() int64 {
+func (x *CreateItemResponse) GetId() int32 {
 	if x != nil {
 		return x.Id
 	}
@@ -445,7 +445,7 @@ func (x *CreateItemResponse) GetAdded() *timestamppb.Timestamp {
 
 type UpdateItemRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name          *string                `protobuf:"bytes,2,opt,name=name,proto3,oneof" json:"name,omitempty"`
 	Description   *string                `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
 	Price         *float32               `protobuf:"fixed32,4,opt,name=price,proto3,oneof" json:"price,omitempty"`
@@ -484,7 +484,7 @@ func (*UpdateItemRequest) Descriptor() ([]byte, []int) {
 	return file_item_v1_item_proto_rawDescGZIP(), []int{7}
 }
 
-func (x *UpdateItemRequest) GetId() int64 {
+func (x *UpdateItemRequest) GetId() int32 {
 	if x != nil {
 		return x.Id
 	}
@@ -557,7 +557,7 @@ func (*UpdateItemResponse) Descriptor() ([]byte, []int) {
 
 type DeleteItemRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id            int32                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -592,7 +592,7 @@ func (*DeleteItemRequest) Descriptor() ([]byte, []int) {
 	return file_item_v1_item_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *DeleteItemRequest) GetId() int64 {
+func (x *DeleteItemRequest) GetId() int32 {
 	if x != nil {
 		return x.Id
 	}
@@ -641,14 +641,14 @@ const file_item_v1_item_proto_rawDesc = "" +
 	"\n" +
 	"\x12item/v1/item.proto\x12\aitem.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb9\x01\n" +
 	"\x04Item\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x1b\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1b\n" +
 	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x03R\x04name\x120\n" +
 	"\x05added\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x05added\x12 \n" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05price\x18\x05 \x01(\x02R\x05price\x12\x1a\n" +
 	"\bquantity\x18\x06 \x01(\x05R\bquantity\" \n" +
 	"\x0eGetItemRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"4\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\"4\n" +
 	"\x0fGetItemResponse\x12!\n" +
 	"\x04item\x18\x01 \x01(\v2\r.item.v1.ItemR\x04item\"\x82\x02\n" +
 	"\x0fGetItemsRequest\x125\n" +
@@ -671,10 +671,10 @@ const file_item_v1_item_proto_rawDesc = "" +
 	"\x05price\x18\x03 \x01(\x02R\x05price\x12\x1a\n" +
 	"\bquantity\x18\x04 \x01(\x05R\bquantity\"V\n" +
 	"\x12CreateItemResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x120\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x120\n" +
 	"\x05added\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x05added\"\xcf\x01\n" +
 	"\x11UpdateItemRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x17\n" +
 	"\x04name\x18\x02 \x01(\tH\x00R\x04name\x88\x01\x01\x12%\n" +
 	"\vdescription\x18\x03 \x01(\tH\x01R\vdescription\x88\x01\x01\x12\x19\n" +
 	"\x05price\x18\x04 \x01(\x02H\x02R\x05price\x88\x01\x01\x12\x1f\n" +
@@ -685,7 +685,7 @@ const file_item_v1_item_proto_rawDesc = "" +
 	"\t_quantity\"\x14\n" +
 	"\x12UpdateItemResponse\"#\n" +
 	"\x11DeleteItemRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"\x14\n" +
+	"\x02id\x18\x01 \x01(\x05R\x02id\"\x14\n" +
 	"\x12DeleteItemResponse2\xeb\x02\n" +
 	"\vItemService\x12>\n" +
 	"\aGetItem\x12\x17.item.v1.GetItemRequest\x1a\x18.item.v1.GetItemResponse\"\x00\x12A\n" +
@@ -695,8 +695,8 @@ const file_item_v1_item_proto_rawDesc = "" +
 	"\n" +
 	"UpdateItem\x12\x1a.item.v1.UpdateItemRequest\x1a\x1b.item.v1.UpdateItemResponse\"\x00\x12G\n" +
 	"\n" +
-	"DeleteItem\x12\x1a.item.v1.DeleteItemRequest\x1a\x1b.item.v1.DeleteItemResponse\"\x00B\x9c\x01\n" +
-	"\vcom.item.v1B\tItemProtoP\x01ZEgithub.com/spotdemo4/ts-server/internal/connect/item/v1;itemv1\xa2\x02\x03IXX\xaa\x02\aItem.V1\xca\x02\aItem\\V1\xe2\x02\x13Item\\V1\\GPBMetadata\xea\x02\bItem::V1b\x06proto3"
+	"DeleteItem\x12\x1a.item.v1.DeleteItemRequest\x1a\x1b.item.v1.DeleteItemResponse\"\x00B\x95\x01\n" +
+	"\vcom.item.v1B\tItemProtoP\x01Z>github.com/spotdemo4/ts-server/internal/connect/item/v1;itemv1\xa2\x02\x03IXX\xaa\x02\aItem.V1\xca\x02\aItem\\V1\xe2\x02\x13Item\\V1\\GPBMetadata\xea\x02\bItem::V1b\x06proto3"
 
 var (
 	file_item_v1_item_proto_rawDescOnce sync.Once

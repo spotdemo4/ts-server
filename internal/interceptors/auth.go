@@ -2,77 +2,19 @@ package interceptors
 
 import (
 	"context"
-	"errors"
-	"fmt"
-	"log"
 	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/spotdemo4/ts-server/internal/auth"
 )
 
-func WithAuthRedirect(next http.Handler, key string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		pathItems := strings.Split(r.URL.Path, "/")
-
-		if len(pathItems) < 2 {
-			http.Error(w, "Not found", http.StatusNotFound)
-			return
-		}
-
-		// Check if the user is authenticated
-		authenticated := false
-		cookies := getCookies(r.Header.Get("Cookie"))
-		for _, cookie := range cookies {
-			if cookie.Name == "token" {
-				subject, err := validateToken(cookie.Value, key)
-				if err == nil {
-					ctx, err := newUserContext(r.Context(), subject)
-					if err == nil {
-						r = r.WithContext(ctx)
-						authenticated = true
-					}
-				}
-
-				break
-			}
-		}
-
-		switch pathItems[1] {
-
-		case "auth":
-			if authenticated {
-				http.Redirect(w, r, "/", http.StatusFound)
-				return
-			}
-			next.ServeHTTP(w, r)
-
-		case "_app", "favicon.png", "icon.png":
-			next.ServeHTTP(w, r)
-
-		default:
-			if authenticated {
-				next.ServeHTTP(w, r)
-				return
-			}
-
-			// Redirect if not authenticated
-			pathRedir := url.QueryEscape(r.URL.Path)
-			http.Redirect(w, r, fmt.Sprintf("/auth?redir=%s", pathRedir), http.StatusFound)
-		}
-	})
-}
-
 type AuthInterceptor struct {
-	key string
+	auth *auth.Auth
 }
 
-func NewAuthInterceptor(key string) *AuthInterceptor {
+func NewAuthInterceptor(auth *auth.Auth) *AuthInterceptor {
 	return &AuthInterceptor{
-		key: key,
+		auth: auth,
 	}
 }
 
@@ -91,12 +33,10 @@ func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		cookies := getCookies(req.Header().Get("Cookie"))
 		for _, cookie := range cookies {
 			if cookie.Name == "token" {
-				subject, err := validateToken(cookie.Value, i.key)
+				user, err := i.auth.GetUserFromToken(cookie.Value)
 				if err == nil {
-					ctx, err = newUserContext(ctx, subject)
-					if err == nil {
-						return next(ctx, req)
-					}
+					ctx := i.auth.NewContext(ctx, user)
+					return next(ctx, req)
 				}
 			}
 		}
@@ -104,19 +44,15 @@ func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		// Check if the request contains a valid authorization bearer token
 		authorization := req.Header().Get("Authorization")
 		if authorization != "" && len(authorization) > 7 {
-			subject, err := validateToken(authorization[7:], i.key)
+			user, err := i.auth.GetUserFromToken(authorization[7:])
 			if err == nil {
-				ctx, err = newUserContext(ctx, subject)
-				if err == nil {
-					return next(ctx, req)
-				}
+				ctx := i.auth.NewContext(ctx, user)
+				return next(ctx, req)
 			}
 		}
 
-		return nil, connect.NewError(
-			connect.CodeUnauthenticated,
-			errors.New("could not authenticate"),
-		)
+		// Return without setting the context
+		return next(ctx, req)
 	})
 }
 
@@ -138,12 +74,10 @@ func (i *AuthInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 		cookies := getCookies(conn.RequestHeader().Get("Cookie"))
 		for _, cookie := range cookies {
 			if cookie.Name == "token" {
-				subject, err := validateToken(cookie.Value, i.key)
+				user, err := i.auth.GetUserFromToken(cookie.Value)
 				if err == nil {
-					ctx, err = newUserContext(ctx, subject)
-					if err == nil {
-						return next(ctx, conn)
-					}
+					ctx := i.auth.NewContext(ctx, user)
+					return next(ctx, conn)
 				}
 			}
 		}
@@ -151,19 +85,15 @@ func (i *AuthInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 		// Check if the request contains a valid authorization bearer token
 		authorization := conn.RequestHeader().Get("Authorization")
 		if authorization != "" && len(authorization) > 7 {
-			subject, err := validateToken(authorization[7:], i.key)
+			user, err := i.auth.GetUserFromToken(authorization[7:])
 			if err == nil {
-				ctx, err = newUserContext(ctx, subject)
-				if err == nil {
-					return next(ctx, conn)
-				}
+				ctx := i.auth.NewContext(ctx, user)
+				return next(ctx, conn)
 			}
 		}
 
-		return connect.NewError(
-			connect.CodeUnauthenticated,
-			errors.New("could not authenticate"),
-		)
+		// Return without setting the context
+		return next(ctx, conn)
 	})
 }
 
@@ -173,69 +103,4 @@ func getCookies(rawCookies string) []*http.Cookie {
 	request := http.Request{Header: header}
 
 	return request.Cookies()
-}
-
-func validateToken(tokenString string, key string) (subject string, err error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (any, error) {
-		// Don't forget to validate the alg is what you expect:
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-
-		return []byte(key), nil
-	})
-	if err != nil {
-		return "", err
-	}
-
-	switch {
-	case token.Valid:
-		subject, err := token.Claims.GetSubject()
-		if err != nil {
-			return "", err
-		}
-
-		return subject, nil
-
-	case errors.Is(err, jwt.ErrTokenMalformed):
-		log.Println("Token is malformed")
-		return "", err
-
-	case errors.Is(err, jwt.ErrSignatureInvalid):
-		log.Println("Token signature is invalid")
-		return "", err
-
-	case errors.Is(err, jwt.ErrTokenExpired) || errors.Is(err, jwt.ErrTokenNotValidYet):
-		log.Println("Token is expired or not valid yet")
-		return "", err
-
-	default:
-		log.Println("Token is invalid")
-		return "", err
-	}
-}
-
-// key is an unexported type for keys defined in this package.
-// This prevents collisions with keys defined in other packages.
-type key int64
-
-// userKey is the key for user.User values in Contexts. It is
-// unexported; clients use user.NewContext and user.FromContext
-// instead of using this key directly.
-var userKey key
-
-// newUserContext returns a new Context that carries value u.
-func newUserContext(ctx context.Context, subject string) (context.Context, error) {
-	id, err := strconv.Atoi(subject)
-	if err != nil {
-		return nil, err
-	}
-
-	return context.WithValue(ctx, userKey, int64(id)), nil
-}
-
-// getUserContext returns the User value stored in ctx, if any.
-func GetUserContext(ctx context.Context) (int64, bool) {
-	u, ok := ctx.Value(userKey).(int64)
-	return u, ok
 }
