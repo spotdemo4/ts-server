@@ -29,11 +29,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1751019234,
-        "narHash": "sha256-MuOweqIu+9sQj9z1H3P07V8EzomImgz6EZBPG4VgN6M=",
+        "lastModified": 1751020017,
+        "narHash": "sha256-B1hQknKq9nkhJbXPuPNz0Y3vQo3fGJ37hSXfU07JqOE=",
         "owner": "spotdemo4",
         "repo": "ts-web",
-        "rev": "1440264d93dc27f97163feaf3ea3a3163ebd36f4",
+        "rev": "827ea4bc78f428be46a67f8732699e302e00f0f3",
         "type": "github"
       },
       "original": {
