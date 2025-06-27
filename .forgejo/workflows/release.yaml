@@ -1,0 +1,115 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: https://github.com/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: https://github.com/DeterminateSystems/nix-installer-action@41e0dcf2158a3d6eefca89332cc236df1733e8a7 # main
+
+      - run: nix flake check --accept-flake-config
+
+  build:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: https://github.com/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: https://github.com/DeterminateSystems/nix-installer-action@41e0dcf2158a3d6eefca89332cc236df1733e8a7 # main
+
+      - run: >
+          nix build
+          .#ts-server-linux-amd64
+          .#ts-server-linux-arm64
+          .#ts-server-linux-arm
+          .#ts-server-windows-amd64
+          .#ts-server-darwin-amd64
+          .#ts-server-darwin-arm64
+
+      - name: publish release
+        uses: https://code.forgejo.org/actions/forgejo-release@a6e3fdb19e717c1541300e0db39f14f22d03fa19 # v2.6.0
+        with:
+          direction: upload
+          hide-archive-link: true
+          release-notes-assistant: true
+          release-dir: |-
+            result*/bin/*
+
+  package:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: DeterminateSystems/nix-installer-action@41e0dcf2158a3d6eefca89332cc236df1733e8a7 # main
+
+      - name: Set ENV
+        shell: bash
+        run: |
+          REGISTRY=codeberg.org
+
+          NR=${{ github.repository }}
+          NAMESPACE="${NR%%/*}"
+          REPOSITORY="${NR##*/}"
+
+          TAG=${{ github.ref_name }}
+          VERSION=${TAG#v}
+
+          echo "REGISTRY=${REGISTRY}" >> $GITHUB_ENV
+          echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_ENV
+          echo "REPOSITORY=${REPOSITORY}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & load images
+        run: |
+          nix build .#ts-server-linux-amd64-image && ./result | docker load
+          nix build .#ts-server-linux-arm64-image && ./result | docker load
+          nix build .#ts-server-linux-arm-image && ./result | docker load
+
+      - name: Push images
+        shell: bash
+        run: |
+          docker image tag $REPOSITORY:$VERSION-amd64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
+          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
+
+          docker image tag $REPOSITORY:$VERSION-arm64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
+          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
+
+          docker image tag $REPOSITORY:$VERSION-arm $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+
+      - name: Push manifest
+        shell: bash
+        run: |
+          docker manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm
+          docker manifest push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION
+
+          docker manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:latest \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
+          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm
+
+  tag:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: https://github.com/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - run: git push origin "${{ github.ref_name }}:latest" --force

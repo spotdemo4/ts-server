@@ -4,7 +4,8 @@
 	"dependencyDashboardTitle": "Dependency Dashboard",
 	"onboarding": false,
 	"requireConfig": "optional",
-	"platform": "github",
+	"platform": "gitea",
+	"endpoint": "https://codeberg.org/api/v1",
 	"repositories": ["spotdemo4/ts-server"],
 	"allowedCommands": ["buf generate", "nix-update --flake --version=skip default"]
 }
