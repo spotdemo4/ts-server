@@ -29,14 +29,10 @@ jobs:
           .#ts-server-darwin-amd64
           .#ts-server-darwin-arm64
 
-      - name: publish release
-        uses: https://code.forgejo.org/actions/forgejo-release@a6e3fdb19e717c1541300e0db39f14f22d03fa19 # v2.6.0
+      - uses: https://gitea.com/actions/gitea-release-action@f66c1c98f12e032443e806fae4882a05368df40c # v1
         with:
-          direction: upload
-          hide-archive-link: true
-          release-notes-assistant: true
-          release-dir: |-
-            result*/bin
+          files: |-
+            result*/bin/*
 
   package:
     needs: check
