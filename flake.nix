@@ -108,6 +108,7 @@
         packages = with pkgs; [
           git
           renovate
+          docker-client
 
           # Nix
           nix-update
