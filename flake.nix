@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     trevstack-web = {
-      url = "github:spotdemo4/ts-web";
+      url = "github:spotdemo4/ts-web/release";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
