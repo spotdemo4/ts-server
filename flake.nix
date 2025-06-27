@@ -144,7 +144,7 @@
           inherit version;
           src = ./.;
           goSum = ./go.sum;
-          vendorHash = "sha256-79Uw1qyLNqOGCi1wyCoAGCY+UWO8DGGFZo3V3Y+CWWI=";
+          vendorHash = "sha256-7/Z5A3ZXGT63GLjtWXKLiwHtp+ROGcxdqIzZhDgGH4w=";
           env.CGO_ENABLED = 0;
 
           preBuild = ''
