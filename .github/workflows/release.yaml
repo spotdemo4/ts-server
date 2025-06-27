@@ -58,12 +58,12 @@ jobs:
 
       - run: >
           nix build
-          .#trevstack-server-linux-amd64
-          .#trevstack-server-linux-arm64
-          .#trevstack-server-linux-arm
-          .#trevstack-server-windows-amd64
-          .#trevstack-server-darwin-amd64
-          .#trevstack-server-darwin-arm64
+          .#ts-server-linux-amd64
+          .#ts-server-linux-arm64
+          .#ts-server-linux-arm
+          .#ts-server-windows-amd64
+          .#ts-server-darwin-amd64
+          .#ts-server-darwin-arm64
 
       - uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:
@@ -95,9 +95,9 @@ jobs:
 
       - name: Build & load images
         run: |
-          nix build .#trevstack-server-linux-amd64-image && ./result | docker load
-          nix build .#trevstack-server-linux-arm64-image && ./result | docker load
-          nix build .#trevstack-server-linux-arm-image && ./result | docker load
+          nix build .#ts-server-linux-amd64-image && ./result | docker load
+          nix build .#ts-server-linux-arm64-image && ./result | docker load
+          nix build .#ts-server-linux-arm-image && ./result | docker load
 
       - name: Set env
         shell: bash

@@ -19,10 +19,10 @@
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
-        "trevstack-web": "trevstack-web"
+        "ts-web": "ts-web"
       }
     },
-    "trevstack-web": {
+    "ts-web": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"

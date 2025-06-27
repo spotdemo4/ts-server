@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    trevstack-web = {
+    ts-web = {
       url = "github:spotdemo4/ts-web/latest";
       inputs.nixpkgs.follows = "nixpkgs";
     };
@@ -11,10 +11,10 @@
 
   outputs = {
     nixpkgs,
-    trevstack-web,
+    ts-web,
     ...
   }: let
-    pname = "trevstack-server";
+    pname = "ts-server";
     version = "0.0.2";
 
     build-systems = [
@@ -149,7 +149,7 @@
 
           preBuild = ''
             HOME=$PWD
-            cp -r ${trevstack-web.packages."${system}".default} client
+            cp -r ${ts-web.packages."${system}".default} client
           '';
 
           installPhase = ''
@@ -208,7 +208,7 @@
 
           preBuild = ''
             HOME=$PWD
-            cp -r ${trevstack-web.packages."${system}".default} client
+            cp -r ${ts-web.packages."${system}".default} client
           '';
         };
 
