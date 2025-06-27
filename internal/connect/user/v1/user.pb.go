@@ -7,6 +7,7 @@
 package userv1
 
 import (
+	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -621,7 +622,7 @@ var File_user_v1_user_proto protoreflect.FileDescriptor
 
 const file_user_v1_user_proto_rawDesc = "" +
 	"\n" +
-	"\x12user/v1/user.proto\x12\auser.v1\"|\n" +
+	"\x12user/v1/user.proto\x12\auser.v1\x1a\x1bbuf/validate/validate.proto\"|\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x05R\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x121\n" +
@@ -629,11 +630,11 @@ const file_user_v1_user_proto_rawDesc = "" +
 	"\x13_profile_picture_id\"\x10\n" +
 	"\x0eGetUserRequest\"4\n" +
 	"\x0fGetUserResponse\x12!\n" +
-	"\x04user\x18\x01 \x01(\v2\r.user.v1.UserR\x04user\"\x88\x01\n" +
-	"\x15UpdatePasswordRequest\x12!\n" +
-	"\fold_password\x18\x01 \x01(\tR\voldPassword\x12!\n" +
-	"\fnew_password\x18\x02 \x01(\tR\vnewPassword\x12)\n" +
-	"\x10confirm_password\x18\x03 \x01(\tR\x0fconfirmPassword\";\n" +
+	"\x04user\x18\x01 \x01(\v2\r.user.v1.UserR\x04user\"\xa3\x01\n" +
+	"\x15UpdatePasswordRequest\x12*\n" +
+	"\fold_password\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x05R\voldPassword\x12*\n" +
+	"\fnew_password\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x05R\vnewPassword\x122\n" +
+	"\x10confirm_password\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x05R\x0fconfirmPassword\";\n" +
 	"\x16UpdatePasswordResponse\x12!\n" +
 	"\x04user\x18\x01 \x01(\v2\r.user.v1.UserR\x04user\"Y\n" +
 	"\x10GetAPIKeyRequest\x12\x1a\n" +

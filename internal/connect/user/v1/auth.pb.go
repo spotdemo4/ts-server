@@ -474,25 +474,25 @@ var File_user_v1_auth_proto protoreflect.FileDescriptor
 
 const file_user_v1_auth_proto_rawDesc = "" +
 	"\n" +
-	"\x12user/v1/auth.proto\x12\auser.v1\x1a\x1bbuf/validate/validate.proto\"O\n" +
+	"\x12user/v1/auth.proto\x12\auser.v1\x1a\x1bbuf/validate/validate.proto\"X\n" +
 	"\fLoginRequest\x12#\n" +
-	"\busername\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x03R\busername\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"%\n" +
+	"\busername\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x03R\busername\x12#\n" +
+	"\bpassword\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x05R\bpassword\"%\n" +
 	"\rLoginResponse\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"{\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\"\x8d\x01\n" +
 	"\rSignUpRequest\x12#\n" +
-	"\busername\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x03R\busername\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\x12)\n" +
-	"\x10confirm_password\x18\x03 \x01(\tR\x0fconfirmPassword\"\x10\n" +
+	"\busername\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x03R\busername\x12#\n" +
+	"\bpassword\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x05R\bpassword\x122\n" +
+	"\x10confirm_password\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x05R\x0fconfirmPassword\"\x10\n" +
 	"\x0eSignUpResponse\"\x0f\n" +
 	"\rLogoutRequest\"\x10\n" +
-	"\x0eLogoutResponse\"6\n" +
-	"\x18BeginPasskeyLoginRequest\x12\x1a\n" +
-	"\busername\x18\x01 \x01(\tR\busername\">\n" +
+	"\x0eLogoutResponse\"?\n" +
+	"\x18BeginPasskeyLoginRequest\x12#\n" +
+	"\busername\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x03R\busername\">\n" +
 	"\x19BeginPasskeyLoginResponse\x12!\n" +
-	"\foptions_json\x18\x01 \x01(\tR\voptionsJson\"Y\n" +
-	"\x19FinishPasskeyLoginRequest\x12\x1a\n" +
-	"\busername\x18\x01 \x01(\tR\busername\x12 \n" +
+	"\foptions_json\x18\x01 \x01(\tR\voptionsJson\"b\n" +
+	"\x19FinishPasskeyLoginRequest\x12#\n" +
+	"\busername\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x03R\busername\x12 \n" +
 	"\vattestation\x18\x02 \x01(\tR\vattestation\"2\n" +
 	"\x1aFinishPasskeyLoginResponse\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token2\x80\x03\n" +
