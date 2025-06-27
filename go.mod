@@ -11,10 +11,10 @@ require (
 	github.com/go-webauthn/webauthn v0.13.0
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
-	github.com/jaswdr/faker/v2 v2.5.0
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/cors v1.11.1
 	github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3
+	github.com/spotdemo4/faker v0.0.2
 	github.com/stephenafamo/bob v0.38.0
 	golang.org/x/crypto v0.39.0
 	golang.org/x/net v0.41.0

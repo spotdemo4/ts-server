@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
     trevstack-web = {
-      url = "github:spotdemo4/ts-web/v0.0.1";
+      url = "github:spotdemo4/ts-web/latest";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -203,7 +203,7 @@
           inherit pname version;
           src = ./.;
           goSum = ./go.sum;
-          vendorHash = "sha256-79Uw1qyLNqOGCi1wyCoAGCY+UWO8DGGFZo3V3Y+CWWI=";
+          vendorHash = "sha256-7/Z5A3ZXGT63GLjtWXKLiwHtp+ROGcxdqIzZhDgGH4w=";
           env.CGO_ENABLED = 0;
 
           preBuild = ''
@@ -223,6 +223,7 @@
               env.CGO_ENABLED = 0;
               env.GOOS = x.GOOS;
               env.GOARCH = x.GOARCH;
+              doCheck = false;
 
               installPhase = ''
                 runHook preInstall

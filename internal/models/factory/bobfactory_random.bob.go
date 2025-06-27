@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jaswdr/faker/v2"
+	"github.com/spotdemo4/faker"
 )
 
 var defaultFaker = faker.New()

@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/jaswdr/faker/v2"
+	"github.com/spotdemo4/faker"
 	models "github.com/spotdemo4/ts-server/internal/models"
 	"github.com/stephenafamo/bob"
 )
