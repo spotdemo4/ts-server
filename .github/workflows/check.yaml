@@ -40,6 +40,5 @@ jobs:
       - uses: cachix/install-nix-action@f0fe604f8a612776892427721526b4c7cfb23aba # v31.4.1
         with:
           nix_path: nixpkgs=channel:nixos-unstable
-      - uses: DeterminateSystems/magic-nix-cache-action@754ce5b47d6e1422d9cc910fc52acf135cb26ee5 # main
 
       - run: nix flake check --accept-flake-config --refresh
