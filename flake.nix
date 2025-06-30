@@ -125,23 +125,27 @@
     });
 
     checks = forSystem ({pkgs, ...}: {
-      nix = with pkgs;
-        runCommandLocal "check-nix" {
+      lint = with pkgs;
+        runCommandLocal "check-lint" {
           nativeBuildInputs = with pkgs; [
             alejandra
+            revive
+            sqlfluff
           ];
         } ''
           cd ${./.}
           HOME=$PWD
 
           alejandra -c .
+          sqlfluff lint
+          revive -config revive.toml -set_exit_status ./...
 
           touch $out
         '';
 
-      go = with pkgs;
+      build = with pkgs;
         buildGoModule {
-          pname = "check-go";
+          pname = "check-build";
           inherit version;
           src = ./.;
           goSum = ./go.sum;
@@ -158,32 +162,15 @@
           '';
         };
 
-      lint = with pkgs;
-        runCommandLocal "check-lint" {
-          nativeBuildInputs = with pkgs; [
-            revive
-          ];
-        } ''
-          cd ${./.}
-          HOME=$PWD
-
-          revive -config revive.toml -set_exit_status ./...
-
-          touch $out
-        '';
-
       db = with pkgs;
         runCommandLocal "check-db" {
           nativeBuildInputs = with pkgs; [
             sqlite
-            sqlfluff
             dbmate
           ];
         } ''
           cd ${./.}
           HOME=$PWD
-
-          sqlfluff lint
 
           export DATABASE_URL=sqlite:$TMP/check.db
           dbmate up
