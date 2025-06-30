@@ -75,7 +75,7 @@ jobs:
           curl -L -o /etc/containers/registries.conf https://raw.githubusercontent.com/containers/image/main/registries.conf
           curl -L -o /etc/containers/policy.json https://raw.githubusercontent.com/containers/image/main/default-policy.json
 
-          podman login ${{ github.server_url }} -u ${{ github.actor }} -p ${{ secrets.PAT }}
+          podman login ${{ github.server_url }} -u ${{ github.actor }} -p ${{ secrets.USER_TOKEN }}
 
       - name: Load images
         run: |

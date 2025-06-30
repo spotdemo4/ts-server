@@ -19,6 +19,6 @@ jobs:
       - name: Renovate
         env:
           RENOVATE_CONFIG_FILE: .gitea/renovate-global.json
-          RENOVATE_TOKEN: ${{ secrets.PAT }}
+          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           RENOVATE_GITHUB_COM_TOKEN: ${{ secrets.GH_TOKEN }}
         run: renovate
