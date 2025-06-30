@@ -108,7 +108,7 @@
         packages = with pkgs; [
           git
           renovate
-          docker
+          podman
 
           # Nix
           nix-update
@@ -121,6 +121,10 @@
           protoc-gen-go
           protoc-gen-connect-go
         ];
+
+        shellHook = ''
+          alias docker=podman
+        '';
       };
     });
 
