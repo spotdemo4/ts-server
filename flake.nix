@@ -15,7 +15,7 @@
     ...
   }: let
     pname = "ts-server";
-    version = "0.0.15";
+    version = "0.0.16";
 
     build-systems = [
       "x86_64-linux"
