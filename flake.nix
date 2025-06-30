@@ -1,8 +1,21 @@
 {
   description = "Trevstack Server";
 
+  nixConfig = {
+    extra-substituters = [
+      "https://trevnur.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "trevnur.cachix.org-1:hBd15IdszwT52aOxdKs5vNTbq36emvEeGqpb25Bkq6o="
+    ];
+  };
+
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nur = {
+      url = "github:nix-community/NUR";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     ts-web = {
       url = "github:spotdemo4/ts-web/latest";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -11,6 +24,7 @@
 
   outputs = {
     nixpkgs,
+    nur,
     ts-web,
     ...
   }: let
@@ -30,6 +44,7 @@
             inherit system;
             pkgs = import nixpkgs {
               inherit system;
+              overlays = [nur.overlays.default];
             };
           }
       );
@@ -62,47 +77,32 @@
     ];
   in {
     devShells = forSystem ({pkgs, ...}: {
-      default = let
-        bobgen = pkgs.buildGoModule {
-          name = "bobgen";
-          src = pkgs.fetchFromGitHub {
-            owner = "stephenafamo";
-            repo = "bob";
-            rev = "v0.38.0";
-            sha256 = "sha256-pIw+fFnkkYJMYoftxSBwBZzJkhYBLjknOENDibVjJk4=";
-          };
-          vendorHash = "sha256-iVYzRKIUrjR/pzlpUMtgaFBn5idd/TBsSZxh/SQGT0M=";
-          subPackages = [
-            "gen/bobgen-sql"
-          ];
-        };
-      in
-        pkgs.mkShell {
-          packages = with pkgs; [
-            git
+      default = pkgs.mkShell {
+        packages = with pkgs; [
+          git
 
-            # Nix
-            nix-update
-            alejandra
+          # Nix
+          nix-update
+          alejandra
 
-            # Go
-            go
-            gotools
-            gopls
-            revive
+          # Go
+          go
+          gotools
+          gopls
+          revive
 
-            # Database
-            sqlite
-            dbmate
-            sqlfluff
-            bobgen
+          # Database
+          sqlite
+          dbmate
+          sqlfluff
+          pkgs.nur.repos.trev.bobgen
 
-            # Protobuf
-            buf
-            protoc-gen-go
-            protoc-gen-connect-go
-          ];
-        };
+          # Protobuf
+          buf
+          protoc-gen-go
+          protoc-gen-connect-go
+        ];
+      };
 
       ci = pkgs.mkShell {
         packages = with pkgs; [
