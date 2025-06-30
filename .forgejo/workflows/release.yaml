@@ -54,7 +54,8 @@ jobs:
       - name: Set ENV
         shell: bash
         run: |
-          REGISTRY=${{ github.server_url }}
+          REGISTRY=$(basename ${{ github.server_url }})
+          REGISTRY=${REGISTRY,,}
 
           NR=${{ github.repository }}
           NAMESPACE="${NR%%/*}"

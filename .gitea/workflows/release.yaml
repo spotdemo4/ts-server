@@ -34,6 +34,87 @@ jobs:
           files: |-
             result*/bin/*
 
+  package:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: https://github.com/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: https://github.com/DeterminateSystems/nix-installer-action@21a544727d0c62386e78b4befe52d19ad12692e3 # v17
+
+      - run: >
+          nix build
+          .#ts-server-linux-amd64-image
+          .#ts-server-linux-arm64-image
+          .#ts-server-linux-arm-image
+
+      - uses: https://github.com/nicknovitski/nix-develop@9be7cfb4b10451d3390a75dc18ad0465bed4932a # v1.2.1
+        with:
+          arguments: ".#ci"
+
+      - name: Set ENV
+        shell: bash
+        run: |
+          REGISTRY=$(basename ${{ github.server_url }})
+          REGISTRY=${REGISTRY,,}
+
+          NR=${{ github.repository }}
+          NAMESPACE="${NR%%/*}"
+          REPOSITORY="${NR##*/}"
+
+          TAG=${{ github.ref_name }}
+          VERSION=${TAG#v}
+
+          echo "REGISTRY=${REGISTRY}" >> $GITHUB_ENV
+          echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_ENV
+          echo "REPOSITORY=${REPOSITORY}" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Login
+        run: |
+          mkdir -p /etc/containers
+          curl -L -o /etc/containers/registries.conf https://raw.githubusercontent.com/containers/image/main/registries.conf
+          curl -L -o /etc/containers/policy.json https://raw.githubusercontent.com/containers/image/main/default-policy.json
+
+          podman login ${{ github.server_url }} -u ${{ github.actor }} -p ${{ secrets.PAT }}
+
+      - name: Load images
+        run: |
+          podman load < result
+          podman load < result-1
+          podman load < result-2
+
+      - name: Push images
+        shell: bash
+        run: |
+          podman image tag $REPOSITORY:$VERSION-amd64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
+          podman push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
+
+          podman image tag $REPOSITORY:$VERSION-arm64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
+          podman push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
+
+          podman image tag $REPOSITORY:$VERSION-arm $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+          podman push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+
+      - name: Push manifest
+        shell: bash
+        run: |
+          podman manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+          podman manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
+          podman manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
+          podman manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm
+          podman manifest push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION
+
+          podman manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:latest \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
+            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
+          podman manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
+          podman manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
+          podman manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm
+
   tag:
     needs: check
     runs-on: ubuntu-latest
