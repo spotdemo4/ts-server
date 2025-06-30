@@ -1,8 +1,8 @@
-# Trevstack Server
-
 [![GitHub](https://img.shields.io/badge/GitHub-%23121011.svg?logo=github&logoColor=white)](https://github.com/spotdemo4/ts-server)
 [![Gitea](https://img.shields.io/badge/Gitea-6eaa5b?logo=gitea&logoColor=fff)](https://gitea.com/spotdemo4/ts-server)
 [![Codeberg](https://img.shields.io/badge/Codeberg-2185D0?logo=codeberg&logoColor=fff)](https://codeberg.org/spotdemo4/ts-server)
+
+# Trevstack Server
 
 [![go version](https://img.shields.io/github/go-mod/go-version/spotdemo4/ts-server?logo=Go&logoColor=%2389dceb&label=go%20version&labelColor=%2311111b&color=%23313244)](https://go.dev/)
 [![go report card](https://img.shields.io/badge/go%20report-A%2B-brightgreen?logo=Go&logoColor=%2389dceb&label=go%20report&labelColor=%2311111b)](https://www.goreportcard.com/report/github.com/spotdemo4/ts-server)
