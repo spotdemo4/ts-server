@@ -112,9 +112,9 @@ jobs:
 
       - name: Build & load images
         run: |
-          nix build .#ts-server-linux-amd64-image && ./result | docker load
-          nix build .#ts-server-linux-arm64-image && ./result | docker load
-          nix build .#ts-server-linux-arm-image && ./result | docker load
+          nix build .#ts-server-linux-amd64-image && docker load < result
+          nix build .#ts-server-linux-arm64-image && docker load < result
+          nix build .#ts-server-linux-arm-image && docker load < result
 
       - name: Push images
         shell: bash

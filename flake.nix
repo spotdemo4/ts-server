@@ -121,10 +121,6 @@
           protoc-gen-go
           protoc-gen-connect-go
         ];
-
-        shellHook = ''
-          alias docker=podman
-        '';
       };
     });
 
@@ -245,12 +241,12 @@
 
         images = builtins.listToAttrs (builtins.map (x: {
             name = "${pname}-${x.GOOS}-${x.GOARCH}-image";
-            value = pkgs.dockerTools.streamLayeredImage {
+            value = pkgs.dockerTools.buildImage {
               name = "${pname}";
               tag = "${version}-${x.GOARCH}";
               created = "now";
               architecture = "${x.GOARCH}";
-              contents = [binaries."${pname}-${x.GOOS}-${x.GOARCH}"];
+              copyToRoot = [binaries."${pname}-${x.GOOS}-${x.GOARCH}"];
               config = {
                 Cmd = ["${binaries."${pname}-${x.GOOS}-${x.GOARCH}"}/bin/${pname}-${x.GOOS}-${x.GOARCH}-${version}"];
               };
