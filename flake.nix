@@ -44,7 +44,10 @@
             inherit system;
             pkgs = import nixpkgs {
               inherit system;
-              overlays = [nur.overlays.default];
+              overlays = [
+                nur.overlays.default
+                nur.legacyPackages."${system}".repos.trev.overlays.renovate
+              ];
             };
           }
       );
