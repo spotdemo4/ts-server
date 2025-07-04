@@ -49,7 +49,7 @@ jobs:
 
       - uses: https://github.com/nicknovitski/nix-develop@9be7cfb4b10451d3390a75dc18ad0465bed4932a # v1.2.1
         with:
-          arguments: ".#ci"
+          arguments: ".#ci --accept-flake-config"
 
       - name: Set ENV
         shell: bash
