@@ -38,4 +38,4 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@21a544727d0c62386e78b4befe52d19ad12692e3 # v17
       - uses: DeterminateSystems/magic-nix-cache-action@def9f5a5c6a6b8751c0534e8813a5d0ad2635660 # v11
 
-      - run: nix flake check --accept-flake-config
+      - uses: spotdemo4/nix-flake-check-action@1a9ea412e0a6bbbb61cd89b7823634f6bc854087

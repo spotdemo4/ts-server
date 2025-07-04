@@ -146,6 +146,29 @@
           touch $out
         '';
 
+      scan = with pkgs; let
+        rules = pkgs.fetchFromGitHub {
+          owner = "semgrep";
+          repo = "semgrep-rules";
+          rev = "d375208f04370b4e8d3ca7fe668db6f0465bb643";
+          hash = "sha256-2fU2LZGEiR4W/CGPir9e41Elf9OfxK2tUcVYKocZVAI=";
+        };
+      in
+        runCommand "check-scan" {
+          nativeBuildInputs = with pkgs; [
+            git
+            semgrep
+          ];
+        } ''
+          cd ${./.}
+          mkdir -p "$TMP/scan"
+          HOME="$TMP/scan"
+
+          semgrep scan --quiet --error --metrics=off --config="${rules}/go"
+
+          touch $out
+        '';
+
       build = with pkgs;
         buildGoModule {
           pname = "check-build";

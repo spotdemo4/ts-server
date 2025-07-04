@@ -5,6 +5,9 @@ on:
     - cron: "5 4 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   flake:
     runs-on: ubuntu-latest
