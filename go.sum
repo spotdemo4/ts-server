@@ -45,6 +45,8 @@ github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e h1:ijClszYn+mADRFY17k
 github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e/go.mod h1:boTsfXsheKC2y+lKOCMpSfarhxDeIzfZG1jqGcPl3cA=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/jaswdr/faker/v2 v2.6.0 h1:19MkwsI6I2vrJhYZqsJpspzRb/fDlax2q1iBhPMxGy0=
+github.com/jaswdr/faker/v2 v2.6.0/go.mod h1:jZq+qzNQr8/P+5fHd9t3txe2GNPnthrTfohtnJ7B+68=
 github.com/joho/godotenv v1.5.1 h1:7eLL/+HRGLY0ldzfGMeQkb7vMd0as4CfYvUVzLqw0N0=
 github.com/joho/godotenv v1.5.1/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
 github.com/lib/pq v1.10.9 h1:YXG7RB+JIjhP29X+OtkiDnYaXQwpS4JEWq7dtCCRUEw=
@@ -67,8 +69,6 @@ github.com/rs/cors v1.11.1 h1:eU3gRzXLRK57F5rKMGMZURNdIG4EoAmX8k94r9wXWHA=
 github.com/rs/cors v1.11.1/go.mod h1:XyqrcTp5zjWr1wsJ8PIRZssZ8b/WMcMf71DJnit4EMU=
 github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3 h1:U/mix+tE4j8pJPENtXAMmUxHo6vZX6IDFfEw5CqV8jg=
 github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3/go.mod h1:JwuvDDgb1VLGyHgSsQN3I+dx6QkEGk86o6Yc8vxzG/4=
-github.com/spotdemo4/faker v0.0.2 h1:3ABGz/2JDuXUrTc/CmRqtsir63HhVUWBII1pvqwZ7g4=
-github.com/spotdemo4/faker v0.0.2/go.mod h1:6+xDd+Qjz/7pMMtgwp7JRcJ0F5TtMdrG9NjvScI7K+c=
 github.com/stephenafamo/bob v0.38.0 h1:G2+VfEiP4CdpXNmq27J77UuEnw/pcieDogKQw9sRUJs=
 github.com/stephenafamo/bob v0.38.0/go.mod h1:8MbdjERiyoFRDX1HK9bcOupCayWUG0A7wrKf3wynU/k=
 github.com/stephenafamo/fakedb v0.0.0-20221230081958-0b86f816ed97 h1:XItoZNmhOih06TC02jK7l3wlpZ0XT/sPQYutDcGOQjg=

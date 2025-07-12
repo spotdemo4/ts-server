@@ -16,6 +16,10 @@
       url = "github:nix-community/NUR";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    semgrep-rules = {
+      url = "github:semgrep/semgrep-rules";
+      flake = false;
+    };
     ts-web = {
       url = "github:spotdemo4/ts-web/latest";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -25,12 +29,10 @@
   outputs = {
     nixpkgs,
     nur,
+    semgrep-rules,
     ts-web,
     ...
   }: let
-    pname = "ts-server";
-    version = "0.0.17";
-
     build-systems = [
       "x86_64-linux"
       "aarch64-linux"
@@ -52,32 +54,32 @@
           }
       );
 
-    host-systems = [
-      {
-        GOOS = "linux";
-        GOARCH = "amd64";
-      }
-      {
-        GOOS = "linux";
-        GOARCH = "arm64";
-      }
-      {
-        GOOS = "linux";
-        GOARCH = "arm";
-      }
-      {
-        GOOS = "windows";
-        GOARCH = "amd64";
-      }
-      {
-        GOOS = "darwin";
-        GOARCH = "amd64";
-      }
-      {
-        GOOS = "darwin";
-        GOARCH = "arm64";
-      }
-    ];
+    ts-server = forSystem ({
+      pkgs,
+      system,
+      ...
+    }:
+      pkgs.buildGoModule (finalAttrs: {
+        pname = "ts-server";
+        version = "0.0.17";
+        src = ./.;
+        goSum = ./go.sum;
+        vendorHash = "sha256-aKGMAGboqZMdXm5xtelXUXi674UdW+s/qL9QGD10oi4=";
+        env.CGO_ENABLED = 0;
+
+        preBuild = ''
+          cp -r ${ts-web.packages."${system}".default} client
+        '';
+
+        meta = {
+          description = "A simple GO CRUD app";
+          mainProgram = "ts-server";
+          homepage = "https://github.com/spotdemo4/ts-server";
+          changelog = "https://github.com/spotdemo4/ts-server/releases/tag/v${finalAttrs.version}";
+          license = pkgs.lib.licenses.mit;
+          platforms = pkgs.lib.platforms.all;
+        };
+      }));
   in {
     devShells = forSystem ({pkgs, ...}: {
       default = pkgs.mkShell {
@@ -127,83 +129,59 @@
       };
     });
 
-    checks = forSystem ({pkgs, ...}: {
-      lint = with pkgs;
-        runCommandLocal "check-lint" {
+    checks = forSystem ({
+      pkgs,
+      system,
+      ...
+    }:
+      pkgs.nur.repos.trev.lib.mkChecks {
+        lint = {
+          src = ./.;
           nativeBuildInputs = with pkgs; [
             alejandra
             revive
             sqlfluff
           ];
-        } ''
-          cd ${./.}
-          HOME=$PWD
-
-          alejandra -c .
-          sqlfluff lint
-          revive -config revive.toml -set_exit_status ./...
-
-          touch $out
-        '';
-
-      scan = with pkgs; let
-        rules = pkgs.fetchFromGitHub {
-          owner = "semgrep";
-          repo = "semgrep-rules";
-          rev = "d375208f04370b4e8d3ca7fe668db6f0465bb643";
-          hash = "sha256-2fU2LZGEiR4W/CGPir9e41Elf9OfxK2tUcVYKocZVAI=";
+          checkPhase = ''
+            alejandra -c .
+            sqlfluff lint
+            revive -config revive.toml -set_exit_status ./...
+          '';
         };
-      in
-        runCommand "check-scan" {
-          nativeBuildInputs = with pkgs; [
-            git
-            semgrep
-          ];
-        } ''
-          cd ${./.}
-          mkdir -p "$TMP/scan"
-          HOME="$TMP/scan"
 
-          semgrep scan --quiet --error --metrics=off --config="${rules}/go"
-
-          touch $out
-        '';
-
-      build = with pkgs;
-        buildGoModule {
-          pname = "check-build";
-          inherit version;
+        scan = {
           src = ./.;
-          goSum = ./go.sum;
-          vendorHash = "sha256-7/Z5A3ZXGT63GLjtWXKLiwHtp+ROGcxdqIzZhDgGH4w=";
-          env.CGO_ENABLED = 0;
-
-          preBuild = ''
-            HOME=$PWD
-            cp -r ${ts-web.packages."${system}".default} client
-          '';
-
-          installPhase = ''
-            touch $out
+          nativeBuildInputs = [
+            pkgs.nur.repos.trev.opengrep
+          ];
+          checkPhase = ''
+            mkdir -p "$TMP/scan"
+            HOME="$TMP/scan"
+            opengrep scan --quiet --error --config="${semgrep-rules}/go"
           '';
         };
 
-      db = with pkgs;
-        runCommandLocal "check-db" {
+        db = {
+          src = ./.;
           nativeBuildInputs = with pkgs; [
             sqlite
             dbmate
           ];
-        } ''
-          cd ${./.}
-          HOME=$PWD
-
-          export DATABASE_URL=sqlite:$TMP/check.db
-          dbmate up
-
-          touch $out
-        '';
-    });
+          checkPhase = ''
+            export DATABASE_URL=sqlite:$TMP/check.db
+            dbmate up
+          '';
+        };
+      }
+      // {
+        test = ts-server."${system}".overrideAttrs {
+          doCheck = true;
+          dontBuild = true;
+          installPhase = ''
+            touch $out
+          '';
+        };
+      });
 
     formatter = forSystem ({pkgs, ...}: pkgs.alejandra);
 
@@ -212,66 +190,20 @@
         pkgs,
         system,
         ...
-      }: let
-        server = pkgs.buildGoModule {
-          inherit pname version;
-          src = ./.;
-          goSum = ./go.sum;
-          vendorHash = "sha256-7/Z5A3ZXGT63GLjtWXKLiwHtp+ROGcxdqIzZhDgGH4w=";
-          env.CGO_ENABLED = 0;
+      }:
+        with pkgs.nur.repos.trev.lib; rec {
+          default = ts-server."${system}";
 
-          preBuild = ''
-            HOME=$PWD
-            cp -r ${ts-web.packages."${system}".default} client
-          '';
-        };
+          linux_amd64 = goModuleToPlatform default "linux" "amd64";
+          linux_arm64 = goModuleToPlatform default "linux" "arm64";
+          linux_arm = goModuleToPlatform default "linux" "arm";
+          darwin_arm64 = goModuleToPlatform default "darwin" "arm64";
+          windows_amd64 = goModuleToPlatform default "windows" "amd64";
 
-        binaries = builtins.listToAttrs (builtins.map (x: {
-            name = "${pname}-${x.GOOS}-${x.GOARCH}";
-            value = server.overrideAttrs {
-              nativeBuildInputs =
-                server.nativeBuildInputs
-                ++ [
-                  pkgs.rename
-                ];
-              env.CGO_ENABLED = 0;
-              env.GOOS = x.GOOS;
-              env.GOARCH = x.GOARCH;
-              doCheck = false;
-
-              installPhase = ''
-                runHook preInstall
-
-                mkdir -p $out/bin
-                find $GOPATH/bin -type f -exec mv -t $out/bin {} +
-                rename 's/(.+\/)(.+?)(\.[^.]*$|$)/$1${pname}-${x.GOOS}-${x.GOARCH}-${version}$3/' $out/bin/*
-
-                runHook postInstall
-              '';
-            };
-          })
-          host-systems);
-
-        images = builtins.listToAttrs (builtins.map (x: {
-            name = "${pname}-${x.GOOS}-${x.GOARCH}-image";
-            value = pkgs.dockerTools.buildImage {
-              name = "${pname}";
-              tag = "${version}-${x.GOARCH}";
-              created = "now";
-              architecture = "${x.GOARCH}";
-              copyToRoot = [binaries."${pname}-${x.GOOS}-${x.GOARCH}"];
-              config = {
-                Cmd = ["${binaries."${pname}-${x.GOOS}-${x.GOARCH}"}/bin/${pname}-${x.GOOS}-${x.GOARCH}-${version}"];
-              };
-            };
-          })
-          (builtins.filter (x: x.GOOS == "linux") host-systems));
-      in
-        {
-          default = server;
+          linux_amd64_image = goModuleToImage linux_amd64;
+          linux_arm64_image = goModuleToImage linux_arm64;
+          linux_arm_image = goModuleToImage linux_arm;
         }
-        // binaries
-        // images
     );
   };
 }

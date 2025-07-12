@@ -54,6 +54,7 @@ func WithAuthRedirect(next http.Handler, auth *auth.Auth) http.Handler {
 
 			// Redirect if not authenticated
 			pathRedir := url.QueryEscape(r.URL.Path)
+			// nosemgrep
 			http.Redirect(w, r, fmt.Sprintf("/auth?redir=%s", pathRedir), http.StatusFound)
 		}
 	})

@@ -1,11 +1,13 @@
 package file
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spotdemo4/ts-server/internal/auth"
 	"github.com/spotdemo4/ts-server/internal/interceptors"
@@ -57,8 +59,9 @@ func (h *FileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", http.DetectContentType(file.Data))
-	w.Write(file.Data)
+	// Send file in response
+	buffer := bytes.NewReader(file.Data)
+	http.ServeContent(w, r, file.Name, time.Time{}, buffer)
 }
 
 func NewFileHandler(db *bob.DB, auth *auth.Auth) http.Handler {
