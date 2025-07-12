@@ -64,7 +64,7 @@
         version = "0.0.17";
         src = ./.;
         goSum = ./go.sum;
-        vendorHash = "sha256-FsOmI7WoqiGYzys4XLmEfNPgEeFLrqhe5WtyZf4uzOs=";
+        vendorHash = "sha256-5ACoMxSyY5bpnqNtAzATyBv6Lqj0HldTP7SYXSFFm2Q=";
         env.CGO_ENABLED = 0;
 
         preBuild = ''
