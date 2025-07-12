@@ -175,6 +175,7 @@
       }
       // {
         test = ts-server."${system}".overrideAttrs {
+          pname = "test";
           doCheck = true;
           dontBuild = true;
           installPhase = ''
