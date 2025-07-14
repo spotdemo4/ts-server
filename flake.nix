@@ -192,15 +192,15 @@
         with pkgs.nur.repos.trev.lib; rec {
           default = ts-server."${system}";
 
-          linux_amd64 = goModuleToPlatform default "linux" "amd64";
-          linux_arm64 = goModuleToPlatform default "linux" "arm64";
-          linux_arm = goModuleToPlatform default "linux" "arm";
-          darwin_arm64 = goModuleToPlatform default "darwin" "arm64";
-          windows_amd64 = goModuleToPlatform default "windows" "amd64";
+          linux-amd64 = goModuleToPlatform default "linux" "amd64";
+          linux-arm64 = goModuleToPlatform default "linux" "arm64";
+          linux-arm = goModuleToPlatform default "linux" "arm";
+          darwin-arm64 = goModuleToPlatform default "darwin" "arm64";
+          windows-amd64 = goModuleToPlatform default "windows" "amd64";
 
-          linux_amd64_image = goModuleToImage linux_amd64;
-          linux_arm64_image = goModuleToImage linux_arm64;
-          linux_arm_image = goModuleToImage linux_arm;
+          linux-amd64-image = goModuleToImage linux_amd64;
+          linux-arm64-image = goModuleToImage linux_arm64;
+          linux-arm-image = goModuleToImage linux_arm;
         }
     );
   };

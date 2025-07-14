@@ -19,7 +19,6 @@ jobs:
 
   build:
     needs: check
-    if: ${{ always() && !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -28,24 +27,32 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@c723f3a885e3f1d866d91f4f0c33dd44b1fc7c60 # v18
       - uses: DeterminateSystems/magic-nix-cache-action@e1c1dae8e170ed20fd2e6aaf9979ca2d3905d636 # v12
 
-      - run: >
-          nix build
-          .#ts-server-linux-amd64
-          .#ts-server-linux-arm64
-          .#ts-server-linux-arm
-          .#ts-server-windows-amd64
-          .#ts-server-darwin-amd64
-          .#ts-server-darwin-arm64
+      - run: |
+          mkdir binaries
+
+          nix build .#linux-amd64
+          cp result/bin/ts-server binaries/ts-server-linux-amd64
+
+          nix build .#linux-arm64
+          cp result/bin/ts-server binaries/ts-server-linux-arm64
+
+          nix build .#linux-arm
+          cp result/bin/ts-server binaries/ts-server-linux-arm
+
+          nix build .#darwin-arm64
+          cp result/bin/ts-server binaries/ts-server-darwin-arm64
+
+          nix build .#windows-amd64
+          cp result/bin/ts-server.exe binaries/ts-server-windows-amd64.exe
 
       - uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:
           generate_release_notes: true
           files: |-
-            result*/bin/*
+            binaries/*
 
   package:
     needs: check
-    if: ${{ always() && !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -79,9 +86,9 @@ jobs:
 
       - name: Build & load images
         run: |
-          nix build .#ts-server-linux-amd64-image && docker load < result
-          nix build .#ts-server-linux-arm64-image && docker load < result
-          nix build .#ts-server-linux-arm-image && docker load < result
+          nix build .#linux-amd64-image && docker load < result
+          nix build .#linux-arm64-image && docker load < result
+          nix build .#linux-arm-image && docker load < result
 
       - name: Push images
         shell: bash
@@ -117,7 +124,6 @@ jobs:
 
   tag:
     needs: check
-    if: ${{ always() && !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -20,19 +20,28 @@ jobs:
       - uses: https://github.com/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: https://github.com/DeterminateSystems/nix-installer-action@c723f3a885e3f1d866d91f4f0c33dd44b1fc7c60 # v18
 
-      - run: >
-          nix build
-          .#ts-server-linux-amd64
-          .#ts-server-linux-arm64
-          .#ts-server-linux-arm
-          .#ts-server-windows-amd64
-          .#ts-server-darwin-amd64
-          .#ts-server-darwin-arm64
+      - run: |
+          mkdir binaries
+
+          nix build .#linux-amd64
+          cp result/bin/ts-server binaries/ts-server-linux-amd64
+
+          nix build .#linux-arm64
+          cp result/bin/ts-server binaries/ts-server-linux-arm64
+
+          nix build .#linux-arm
+          cp result/bin/ts-server binaries/ts-server-linux-arm
+
+          nix build .#darwin-arm64
+          cp result/bin/ts-server binaries/ts-server-darwin-arm64
+
+          nix build .#windows-amd64
+          cp result/bin/ts-server.exe binaries/ts-server-windows-amd64.exe
 
       - uses: https://gitea.com/actions/gitea-release-action@f66c1c98f12e032443e806fae4882a05368df40c # v1
         with:
           files: |-
-            result*/bin/*
+            binaries/*
 
   package:
     needs: check
@@ -43,9 +52,9 @@ jobs:
 
       - run: >
           nix build
-          .#ts-server-linux-amd64-image
-          .#ts-server-linux-arm64-image
-          .#ts-server-linux-arm-image
+          .#linux-amd64-image
+          .#linux-arm64-image
+          .#linux-arm-image
 
       - uses: https://github.com/nicknovitski/nix-develop@9be7cfb4b10451d3390a75dc18ad0465bed4932a # v1.2.1
         with:
