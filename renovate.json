@@ -17,6 +17,11 @@
 			"automerge": true
 		},
 		{
+            "matchFileNames": ["flake.nix"],
+            "versioning": "semver-coerced",
+            "enabled": false
+        },
+		{
 			"matchManagers": ["git-submodules"],
 			"postUpgradeTasks": {
 				"commands": ["buf generate", "nix-update --flake --version=skip default"]
