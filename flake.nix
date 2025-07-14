@@ -58,7 +58,7 @@
     }:
       pkgs.buildGoModule (finalAttrs: {
         pname = "ts-server";
-        version = "0.0.17";
+        version = "0.0.18";
         src = ./.;
         goSum = ./go.sum;
         vendorHash = "sha256-5ACoMxSyY5bpnqNtAzATyBv6Lqj0HldTP7SYXSFFm2Q=";
