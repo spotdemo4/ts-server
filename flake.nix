@@ -198,9 +198,9 @@
           darwin-arm64 = goModuleToPlatform default "darwin" "arm64";
           windows-amd64 = goModuleToPlatform default "windows" "amd64";
 
-          linux-amd64-image = goModuleToImage linux_amd64;
-          linux-arm64-image = goModuleToImage linux_arm64;
-          linux-arm-image = goModuleToImage linux_arm;
+          linux-amd64-image = goModuleToImage linux-amd64;
+          linux-arm64-image = goModuleToImage linux-arm64;
+          linux-arm-image = goModuleToImage linux-arm;
         }
     );
   };
