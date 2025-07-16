@@ -14,13 +14,13 @@
   },
   "packageRules": [
     {
-      "matchManagers": ["nix"],
-      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
-      "enabled": false
-    },
-    {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
+    },
+    {
+      "matchManagers": ["nix"],
+      "matchUpdateTypes": ["digest"],
+      "enabled": false
     },
     {
       "matchManagers": ["github-actions"],
