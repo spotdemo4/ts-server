@@ -3,7 +3,8 @@
   "extends": ["config:recommended", "group:allDigest"],
   "lockFileMaintenance": {
     "enabled": true,
-    "automerge": true
+    "automerge": true,
+    "schedule": ["at any time"]
   },
   "git-submodules": {
     "enabled": true
@@ -20,12 +21,6 @@
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
-    },
-    {
-      "matchManagers": ["nix"],
-      "lockFileMaintenance": {
-        "schedule": ["at any time"]
-      }
     },
     {
       "matchManagers": ["github-actions"],
