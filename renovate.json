@@ -14,8 +14,8 @@
   },
   "packageRules": [
     {
-      "matchFileNames": ["flake.nix"],
-      "versioning": "semver-coerced",
+      "matchManagers": ["nix"],
+      "matchUpdateTypes": ["major", "minor", "patch", "pin", "digest"],
       "enabled": false
     },
     {
