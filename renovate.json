@@ -38,6 +38,11 @@
     },
     {
       "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "schedule": ["before 4am on monday"]
+    },
+    {
+      "matchManagers": ["gomod"],
       "postUpgradeTasks": {
         "commands": ["nix-update --flake --version=skip default"]
       }
