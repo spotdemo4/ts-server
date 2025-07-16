@@ -22,9 +22,15 @@
       "automerge": true
     },
     {
-      "groupName": "GitHub Actions",
+      "matchManagers": ["nix"],
+      "lockFileMaintenance": {
+        "schedule": ["at any time"]
+      }
+    },
+    {
       "matchManagers": ["github-actions"],
-      "matchPackageNames": ["*"]
+      "matchPackageNames": ["*"],
+      "groupName": "GitHub Actions"
     },
     {
       "matchManagers": ["git-submodules"],
