@@ -82,6 +82,8 @@
         packages = with pkgs; [
           git
           prettier
+          renovate
+          docker-client
 
           # Nix
           nix-update
@@ -98,25 +100,6 @@
           dbmate
           sqlfluff
           pkgs.nur.repos.trev.bobgen
-
-          # Protobuf
-          buf
-          protoc-gen-go
-          protoc-gen-connect-go
-        ];
-      };
-
-      ci = pkgs.mkShell {
-        packages = with pkgs; [
-          git
-          renovate
-          podman
-
-          # Nix
-          nix-update
-
-          # Go
-          go
 
           # Protobuf
           buf

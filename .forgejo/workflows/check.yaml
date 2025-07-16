@@ -17,4 +17,4 @@ jobs:
         with:
           send-statistics: false
 
-      - run: nix flake check --accept-flake-config
+      - run: nix flake check -L --accept-flake-config
