@@ -36,7 +36,6 @@
     build-systems = [
       "x86_64-linux"
       "aarch64-linux"
-      "x86_64-darwin"
       "aarch64-darwin"
     ];
     forSystem = f:
@@ -82,6 +81,7 @@
       default = pkgs.mkShell {
         packages = with pkgs; [
           git
+          prettier
 
           # Nix
           nix-update
@@ -136,13 +136,15 @@
           src = ./.;
           nativeBuildInputs = with pkgs; [
             alejandra
-            revive
             sqlfluff
+            revive
+            prettier
           ];
           checkPhase = ''
             alejandra -c .
             sqlfluff lint
             revive -config revive.toml -set_exit_status ./...
+            prettier --check .
           '';
         };
 

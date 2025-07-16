@@ -1,11 +1,14 @@
 {
-	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"branchPrefix": "renovate/",
-	"dependencyDashboardTitle": "Dependency Dashboard",
-	"onboarding": false,
-	"requireConfig": "optional",
-	"platform": "gitea",
-	"endpoint": "https://codeberg.org/api/v1",
-	"repositories": ["spotdemo4/ts-server"],
-	"allowedCommands": ["buf generate", "nix-update --flake --version=skip default"]
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "branchPrefix": "renovate/",
+  "dependencyDashboardTitle": "Dependency Dashboard",
+  "onboarding": false,
+  "requireConfig": "optional",
+  "platform": "gitea",
+  "endpoint": "https://codeberg.org/api/v1",
+  "repositories": ["spotdemo4/ts-server"],
+  "allowedCommands": [
+    "buf generate",
+    "nix-update --flake --version=skip default"
+  ]
 }
