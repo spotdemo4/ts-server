@@ -76,7 +76,7 @@
           platforms = pkgs.lib.platforms.all;
         };
       }));
-  in {
+  in rec {
     devShells = forSystem ({pkgs, ...}: {
       default = pkgs.mkShell {
         packages = with pkgs; [
@@ -156,14 +156,14 @@
         };
       }
       // {
-        test = ts-server."${system}".overrideAttrs {
-          pname = "test";
+        build = ts-server."${system}".overrideAttrs {
           doCheck = true;
-          dontBuild = true;
           installPhase = ''
             touch $out
           '';
         };
+
+        shell = devShells."${system}".default;
       });
 
     formatter = forSystem ({pkgs, ...}: pkgs.alejandra);
