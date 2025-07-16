@@ -31,19 +31,24 @@ jobs:
           mkdir binaries
 
           nix build .#linux-amd64
-          cp result/bin/ts-server binaries/ts-server-linux-amd64
+          tar czf ts-server-linux-amd64.tar.gz -C result/bin ts-server
+          mv ts-server-linux-amd64.tar.gz binaries
 
           nix build .#linux-arm64
-          cp result/bin/ts-server binaries/ts-server-linux-arm64
+          tar czf ts-server-linux-arm64.tar.gz -C result/bin ts-server
+          mv ts-server-linux-arm64.tar.gz binaries
 
           nix build .#linux-arm
-          cp result/bin/ts-server binaries/ts-server-linux-arm
+          tar czf ts-server-linux-arm.tar.gz -C result/bin ts-server
+          mv ts-server-linux-arm.tar.gz binaries
 
           nix build .#darwin-arm64
-          cp result/bin/ts-server binaries/ts-server-darwin-arm64
+          tar czf ts-server-darwin-arm64.tar.gz -C result/bin ts-server
+          mv ts-server-darwin-arm64.tar.gz binaries
 
           nix build .#windows-amd64
-          cp result/bin/ts-server.exe binaries/ts-server-windows-amd64.exe
+          zip -j ts-server-windows-amd64.zip result/bin/ts-server.exe
+          mv ts-server-windows-amd64.zip binaries
 
       - uses: softprops/action-gh-release@72f2c25fcb47643c292f7107632f7a47c1df5cd8 # v2.3.2
         with:
