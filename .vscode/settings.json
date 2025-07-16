@@ -20,5 +20,8 @@
   // Proto
   "[proto]": {
     "editor.defaultFormatter": "bufbuild.vscode-buf"
-  }
+  },
+
+  // Prettier
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
 }

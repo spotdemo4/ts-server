@@ -2,6 +2,7 @@
   "recommendations": [
     "golang.go",
     "dorzey.vscode-sqlfluff",
-    "bufbuild.vscode-buf"
+    "bufbuild.vscode-buf",
+    "esbenp.prettier-vscode"
   ]
 }
