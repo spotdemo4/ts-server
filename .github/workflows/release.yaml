@@ -30,23 +30,23 @@ jobs:
       - run: |
           mkdir binaries
 
-          nix build .#linux-amd64
+          nix build .#linux-amd64 --accept-flake-config
           tar czf ts-server-linux-amd64.tar.gz -C result/bin ts-server
           mv ts-server-linux-amd64.tar.gz binaries
 
-          nix build .#linux-arm64
+          nix build .#linux-arm64 --accept-flake-config
           tar czf ts-server-linux-arm64.tar.gz -C result/bin ts-server
           mv ts-server-linux-arm64.tar.gz binaries
 
-          nix build .#linux-arm
+          nix build .#linux-arm --accept-flake-config
           tar czf ts-server-linux-arm.tar.gz -C result/bin ts-server
           mv ts-server-linux-arm.tar.gz binaries
 
-          nix build .#darwin-arm64
+          nix build .#darwin-arm64 --accept-flake-config
           tar czf ts-server-darwin-arm64.tar.gz -C result/bin ts-server
           mv ts-server-darwin-arm64.tar.gz binaries
 
-          nix build .#windows-amd64
+          nix build .#windows-amd64 --accept-flake-config
           zip -j ts-server-windows-amd64.zip result/bin/ts-server.exe
           mv ts-server-windows-amd64.zip binaries
 
@@ -91,9 +91,14 @@ jobs:
 
       - name: Build & load images
         run: |
-          nix build .#linux-amd64-image && docker load < result
-          nix build .#linux-arm64-image && docker load < result
-          nix build .#linux-arm-image && docker load < result
+          nix build .#linux-amd64-image --accept-flake-config
+          docker load < result
+
+          nix build .#linux-arm64-image --accept-flake-config
+          docker load < result
+
+          nix build .#linux-arm-image --accept-flake-config
+          docker load < result
 
       - name: Push images
         shell: bash

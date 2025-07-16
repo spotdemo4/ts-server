@@ -23,23 +23,23 @@ jobs:
       - run: |
           mkdir binaries
 
-          nix build .#linux-amd64
+          nix build .#linux-amd64 --accept-flake-config
           tar czf ts-server-linux-amd64.tar.gz -C result/bin ts-server
           mv ts-server-linux-amd64.tar.gz binaries
 
-          nix build .#linux-arm64
+          nix build .#linux-arm64 --accept-flake-config
           tar czf ts-server-linux-arm64.tar.gz -C result/bin ts-server
           mv ts-server-linux-arm64.tar.gz binaries
 
-          nix build .#linux-arm
+          nix build .#linux-arm --accept-flake-config
           tar czf ts-server-linux-arm.tar.gz -C result/bin ts-server
           mv ts-server-linux-arm.tar.gz binaries
 
-          nix build .#darwin-arm64
+          nix build .#darwin-arm64 --accept-flake-config
           tar czf ts-server-darwin-arm64.tar.gz -C result/bin ts-server
           mv ts-server-darwin-arm64.tar.gz binaries
 
-          nix build .#windows-amd64
+          nix build .#windows-amd64 --accept-flake-config
           zip -j ts-server-windows-amd64.zip result/bin/ts-server.exe
           mv ts-server-windows-amd64.zip binaries
 
@@ -60,6 +60,7 @@ jobs:
           .#linux-amd64-image
           .#linux-arm64-image
           .#linux-arm-image
+          --accept-flake-config
 
       - uses: https://github.com/nicknovitski/nix-develop@9be7cfb4b10451d3390a75dc18ad0465bed4932a # v1.2.1
         with:
