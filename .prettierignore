@@ -1,1 +1,11 @@
-flake.lock
+# Build
+/build/
+/tmp/
+
+# Nix
+/result*
+/.direnv/
+
+# Package Managers
+/flake.lock
+/go.sum

@@ -1,7 +1,8 @@
 .env
 /docker-compose.*
 
-# Go
+# Build
+/build/
 /tmp/
 
 # Nix
