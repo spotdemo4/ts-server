@@ -28,8 +28,12 @@
 		},
 		{
 			"matchManagers": ["nix"],
-			"matchUpdateTypes": ["digest"],
 			"enabled": false
+		},
+		{
+			"matchManagers": ["nix"],
+			"matchUpdateTypes": ["lockFileMaintenance"],
+			"enabled": true
 		},
 		{
 			"matchManagers": ["github-actions"],
