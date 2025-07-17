@@ -141,7 +141,8 @@ func (a *Auth) GetUserFromToken(tokenString string) (User, error) {
 			WebauthnID: claims.WebauthnID,
 		},
 
-		db: a.db,
+		db:   a.db,
+		auth: a,
 	}, nil
 }
 

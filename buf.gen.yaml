@@ -1,7 +1,9 @@
 version: v2
 clean: true
 inputs:
-  - directory: proto
+  - git_repo: https://github.com/spotdemo4/ts-proto.git
+    branch: main
+    ref: 84882b11c96b635163b1eda57c153c2743dae614
 
 managed:
   enabled: true

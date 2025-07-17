@@ -23,7 +23,7 @@ type User struct {
 }
 
 func (u User) WebAuthnID() []byte {
-	return []byte(strconv.Itoa(int(u.ID)))
+	return []byte(u.WebauthnID)
 }
 
 func (u User) WebAuthnName() string {

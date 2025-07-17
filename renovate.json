@@ -1,51 +1,58 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "group:allDigest"],
-  "lockFileMaintenance": {
-    "enabled": true,
-    "automerge": true,
-    "schedule": ["at any time"]
-  },
-  "git-submodules": {
-    "enabled": true
-  },
-  "nix": {
-    "enabled": true
-  },
-  "packageRules": [
-    {
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "automerge": true
-    },
-    {
-      "matchManagers": ["nix"],
-      "matchUpdateTypes": ["digest"],
-      "enabled": false
-    },
-    {
-      "matchManagers": ["github-actions"],
-      "matchPackageNames": ["*"],
-      "groupName": "GitHub Actions"
-    },
-    {
-      "matchManagers": ["git-submodules"],
-      "postUpgradeTasks": {
-        "commands": [
-          "buf generate",
-          "nix-update --flake --version=skip default"
-        ]
-      }
-    },
-    {
-      "matchManagers": ["gomod"],
-      "matchUpdateTypes": ["lockFileMaintenance"],
-      "schedule": ["before 4am on monday"]
-    },
-    {
-      "matchManagers": ["gomod"],
-      "postUpgradeTasks": {
-        "commands": ["nix-update --flake --version=skip default"]
-      }
-    }
-  ]
+	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
+	"extends": ["config:recommended", "group:allDigest"],
+	"lockFileMaintenance": {
+		"enabled": true,
+		"automerge": true,
+		"schedule": ["at any time"]
+	},
+	"nix": {
+		"enabled": true
+	},
+	"customManagers": [
+		{
+			"customType": "regex",
+			"description": "Update Buf inputs",
+			"managerFilePatterns": ["/^buf.gen.yaml$/"],
+			"matchStrings": [
+				".*git_repo: (?<packageName>.*\\/(?<depName>.*).git)[\\s\\S]*branch: (?<currentValue>.*)[\\s\\S]*ref: (?<currentDigest>.*)"
+			],
+			"depTypeTemplate": "buf",
+			"datasourceTemplate": "git-refs"
+		}
+	],
+	"packageRules": [
+		{
+			"matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+			"automerge": true
+		},
+		{
+			"matchManagers": ["nix"],
+			"matchUpdateTypes": ["digest"],
+			"enabled": false
+		},
+		{
+			"matchManagers": ["github-actions"],
+			"matchPackageNames": ["*"],
+			"groupName": "GitHub Actions"
+		},
+		{
+			"matchManagers": ["custom.regex"],
+			"matchDepTypes": ["buf"],
+			"postUpgradeTasks": {
+				"commands": ["buf generate", "nix-update --flake --version=skip default"]
+			}
+		},
+		{
+			"matchManagers": ["gomod"],
+			"matchUpdateTypes": ["lockFileMaintenance"],
+			"schedule": ["before 4am on monday"]
+		},
+		{
+			"matchManagers": ["gomod"],
+			"postUpgradeTasks": {
+				"commands": ["nix-update --flake --version=skip default"]
+			}
+		}
+	]
 }

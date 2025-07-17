@@ -81,13 +81,6 @@
       default = pkgs.mkShell {
         packages = with pkgs; [
           git
-          prettier
-          renovate
-          docker-client
-
-          # Nix
-          nix-update
-          alejandra
 
           # Go
           go
@@ -105,7 +98,21 @@
           buf
           protoc-gen-go
           protoc-gen-connect-go
+
+          # Nix
+          nix-update
+          alejandra
+
+          # Actions
+          renovate
+          action-validator
+          prettier
+          docker-client
         ];
+        shellHook = ''
+          echo "nix flake check --accept-flake-config" > .git/hooks/pre-commit
+          chmod +x .git/hooks/pre-commit
+        '';
       };
     });
 
@@ -118,15 +125,21 @@
         lint = {
           src = ./.;
           nativeBuildInputs = with pkgs; [
-            alejandra
-            sqlfluff
             revive
+            sqlfluff
+            alejandra
+            renovate
+            action-validator
             prettier
           ];
           checkPhase = ''
-            alejandra -c .
-            sqlfluff lint
             revive -config revive.toml -set_exit_status ./...
+            sqlfluff lint
+            alejandra -c .
+            renovate-config-validator
+            action-validator .github/workflows/*
+            action-validator .gitea/workflows/*
+            action-validator .forgejo/workflows/*
             prettier --check .
           '';
         };

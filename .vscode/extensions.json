@@ -1,9 +1,9 @@
 {
-  "recommendations": [
-    "golang.go",
-    "dorzey.vscode-sqlfluff",
-    "bufbuild.vscode-buf",
-    "jnoortheen.nix-ide",
-    "esbenp.prettier-vscode"
-  ]
+	"recommendations": [
+		"golang.go",
+		"dorzey.vscode-sqlfluff",
+		"bufbuild.vscode-buf",
+		"jnoortheen.nix-ide",
+		"esbenp.prettier-vscode"
+	]
 }

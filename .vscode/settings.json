@@ -1,32 +1,32 @@
 {
-  "editor.formatOnSave": true,
+	"editor.formatOnSave": true,
 
-  // Go
-  "go.lintTool": "revive",
-  "go.formatTool": "goimports",
-  "go.buildTags": "dev",
-  "go.lintFlags": ["--config=revive.toml"],
-  "gopls": { "ui.semanticTokens": true },
-  "[go]": {
-    "editor.defaultFormatter": "golang.go"
-  },
+	// Go
+	"go.lintTool": "revive",
+	"go.formatTool": "goimports",
+	"go.buildTags": "dev",
+	"go.lintFlags": ["--config=revive.toml"],
+	"gopls": { "ui.semanticTokens": true },
+	"[go]": {
+		"editor.defaultFormatter": "golang.go"
+	},
 
-  // SQLFluff
-  "sqlfluff.config": "db/.sqlfluff",
-  "[sql]": {
-    "editor.defaultFormatter": "dorzey.vscode-sqlfluff"
-  },
+	// SQLFluff
+	"sqlfluff.config": "db/.sqlfluff",
+	"[sql]": {
+		"editor.defaultFormatter": "dorzey.vscode-sqlfluff"
+	},
 
-  // Proto
-  "[proto]": {
-    "editor.defaultFormatter": "bufbuild.vscode-buf"
-  },
+	// Proto
+	"[proto]": {
+		"editor.defaultFormatter": "bufbuild.vscode-buf"
+	},
 
-  // Nix
-  "nix.enableLanguageServer": true,
-  "nix.serverPath": "nixd",
-  "nix.formatterPath": "alejandra",
+	// Nix
+	"nix.enableLanguageServer": true,
+	"nix.serverPath": "nixd",
+	"nix.formatterPath": "alejandra",
 
-  // Prettier
-  "editor.defaultFormatter": "esbenp.prettier-vscode"
+	// Prettier
+	"editor.defaultFormatter": "esbenp.prettier-vscode"
 }
