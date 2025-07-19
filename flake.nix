@@ -60,7 +60,7 @@
         version = "0.0.20";
         src = ./.;
         goSum = ./go.sum;
-        vendorHash = "sha256-xryKCimGbunISAy8qnBzD3nZuHav/eUBAxPgkXYTydM=";
+        vendorHash = "sha256-nYOot5UwRBVH3vF+2e5KNTkq7O/mcRCqkjuZTcf3LGY=";
         env.CGO_ENABLED = 0;
 
         preBuild = ''
