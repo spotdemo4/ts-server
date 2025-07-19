@@ -27,12 +27,16 @@ github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkp
 github.com/dustin/go-humanize v1.0.1/go.mod h1:Mu1zIs6XwVuF/gI1OepvI0qD18qycQx+mFykh5fBlto=
 github.com/fxamacker/cbor/v2 v2.8.0 h1:fFtUGXUzXPHTIUdne5+zzMPTfffl3RD5qYnkY40vtxU=
 github.com/fxamacker/cbor/v2 v2.8.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
+github.com/fxamacker/cbor/v2 v2.9.0 h1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sapM=
+github.com/fxamacker/cbor/v2 v2.9.0/go.mod h1:vM4b+DJCtHn+zz7h3FFp/hDAI9WNWCsZj23V5ytsSxQ=
 github.com/go-sql-driver/mysql v1.9.2 h1:4cNKDYQ1I84SXslGddlsrMhc8k4LeDVj6Ad6WRjiHuU=
 github.com/go-sql-driver/mysql v1.9.2/go.mod h1:qn46aNg1333BRMNU69Lq93t8du/dwxI64Gl8i5p1WMU=
 github.com/go-webauthn/webauthn v0.13.0 h1:cJIL1/1l+22UekVhipziAaSgESJxokYkowUqAIsWs0Y=
 github.com/go-webauthn/webauthn v0.13.0/go.mod h1:Oy9o2o79dbLKRPZWWgRIOdtBGAhKnDIaBp2PFkICRHs=
 github.com/go-webauthn/webauthn v0.13.3 h1:rvX539Gy9U4xAuFQRFJtkgoH5E1GEUyIVbHUDC89Mo4=
 github.com/go-webauthn/webauthn v0.13.3/go.mod h1:H9EdVnxXFMMJyx8Nd/OL3aFFEop3Rb+Af1naR0IbuUQ=
+github.com/go-webauthn/webauthn v0.13.4 h1:q68qusWPcqHbg9STSxBLBHnsKaLxNO0RnVKaAqMuAuQ=
+github.com/go-webauthn/webauthn v0.13.4/go.mod h1:MglN6OH9ECxvhDqoq1wMoF6P6JRYDiQpC9nc5OomQmI=
 github.com/go-webauthn/x v0.1.21 h1:nFbckQxudvHEJn2uy1VEi713MeSpApoAv9eRqsb9AdQ=
 github.com/go-webauthn/x v0.1.21/go.mod h1:sEYohtg1zL4An1TXIUIQ5csdmoO+WO0R4R2pGKaHYKA=
 github.com/go-webauthn/x v0.1.23 h1:9lEO0s+g8iTyz5Vszlg/rXTGrx3CjcD0RZQ1GPZCaxI=
