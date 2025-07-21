@@ -60,7 +60,7 @@
         version = "0.0.20";
         src = ./.;
         goSum = ./go.sum;
-        vendorHash = "sha256-zEfahrH87enI00eaKJqiIwe+jtzNFONK3OCv8WFJ7d4=";
+        vendorHash = null;
         env.CGO_ENABLED = 0;
 
         preBuild = ''
@@ -81,6 +81,7 @@
       default = pkgs.mkShell {
         packages = with pkgs; [
           git
+          pkgs.nur.repos.trev.bumper
 
           # Go
           go
@@ -110,8 +111,8 @@
           docker-client
         ];
         shellHook = ''
-          echo "nix flake check --accept-flake-config" > .git/hooks/pre-commit
-          chmod +x .git/hooks/pre-commit
+          echo "nix flake check --accept-flake-config" > .git/hooks/pre-push
+          chmod +x .git/hooks/pre-push
         '';
       };
     });

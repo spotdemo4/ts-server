@@ -7,5 +7,5 @@
 	"platform": "gitea",
 	"endpoint": "https://codeberg.org/api/v1",
 	"repositories": ["spotdemo4/ts-server"],
-	"allowedCommands": ["buf generate", "nix-update --flake --version=skip default"]
+	"allowedCommands": ["buf generate"]
 }

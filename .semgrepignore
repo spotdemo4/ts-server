@@ -1,2 +1,6 @@
+# Generated
 /internal/connect
 /internal/models
+
+# Vendor
+/vendor/

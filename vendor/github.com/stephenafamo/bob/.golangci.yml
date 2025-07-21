@@ -1,0 +1,70 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - errcheck
+    - errname
+    - errorlint
+    - gochecknoglobals
+    - gocyclo
+    - godox
+    - gosec
+    - govet
+    - ineffassign
+    - maintidx
+    - misspell
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - thelper
+    - unparam
+    - unused
+  settings:
+    errcheck:
+      exclude-functions:
+        - (io.Writer).Write
+        - (*text/template.Template).Parse
+    revive:
+      rules:
+        - name: receiver-naming
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - gochecknoglobals
+          - gocyclo
+          - gosec
+          - nilnil
+        path: _test\.go
+      - path: (.+)\.go$
+        text: G115
+      - linters: [staticcheck]
+        text: "QF1008:"
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofumpt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

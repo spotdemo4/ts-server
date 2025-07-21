@@ -6,5 +6,5 @@
 	"requireConfig": "optional",
 	"platform": "github",
 	"repositories": ["spotdemo4/ts-server"],
-	"allowedCommands": ["buf generate", "nix-update --flake --version=skip default"]
+	"allowedCommands": ["buf generate"]
 }
