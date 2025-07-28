@@ -16,10 +16,6 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
       - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
 
-      - uses: nicknovitski/nix-develop@9be7cfb4b10451d3390a75dc18ad0465bed4932a # v1.2.1
-        with:
-          arguments: '--accept-flake-config'
-
       - uses: actions/create-github-app-token@df432ceedc7162793a195dd1713ff69aefc7379e # v2.0.6
         id: token
         with:
@@ -30,4 +26,4 @@ jobs:
         env:
           RENOVATE_CONFIG_FILE: .github/renovate-global.json
           RENOVATE_TOKEN: ${{ steps.token.outputs.token }}
-        run: renovate
+        run: nix develop --accept-flake-config --command renovate
