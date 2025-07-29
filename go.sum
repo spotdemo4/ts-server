@@ -16,6 +16,8 @@ github.com/aarondl/json v0.0.0-20221020222930-8b0db17ef1bf h1:+edM69bH/X6JpYPmJY
 github.com/aarondl/json v0.0.0-20221020222930-8b0db17ef1bf/go.mod h1:FZqLhJSj2tg0ZN48GB1zvj00+ZYcHPqgsC7yzcgCq6k=
 github.com/aarondl/opt v0.0.0-20230114172057-b91f370c41f0 h1:vLrhbOWVPxtHao/QthU8pcpI4DbtSGnWgH7qIJf8F6k=
 github.com/aarondl/opt v0.0.0-20230114172057-b91f370c41f0/go.mod h1:l4/5NZtYd/SIohsFhaJQQe+sPOTG22furpZ5FvcYOzk=
+github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65 h1:lbdPe4LBNmNDzeQFwNhEc88w90841qv737MI4+aXSYU=
+github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65/go.mod h1:+xKBXrTAUOvrDXO5PRwIr4E1wciHY3Glgl+6OkCXknU=
 github.com/amacneil/dbmate/v2 v2.27.0 h1:A9JCrHD2z7bbPashxSdS17Xhfzzpu/2oB67P6j/xTVY=
 github.com/amacneil/dbmate/v2 v2.27.0/go.mod h1:3OcOFCWRyY5VhRPTGaFq6Siijgzecoe5+0A3oZbaHIc=
 github.com/amacneil/dbmate/v2 v2.28.0 h1:4fAKHjp1k7yY5Mjn4pBm765qPMTs1hd1a2hV0t8pFas=
@@ -83,10 +85,14 @@ github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3 h1:U/mix+tE4j8pJPENtXAMmUxHo6v
 github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3/go.mod h1:JwuvDDgb1VLGyHgSsQN3I+dx6QkEGk86o6Yc8vxzG/4=
 github.com/stephenafamo/bob v0.38.0 h1:G2+VfEiP4CdpXNmq27J77UuEnw/pcieDogKQw9sRUJs=
 github.com/stephenafamo/bob v0.38.0/go.mod h1:8MbdjERiyoFRDX1HK9bcOupCayWUG0A7wrKf3wynU/k=
+github.com/stephenafamo/bob v0.39.0 h1:bpA0XjAityotMDv3+qGifZJ9hUrfIfFEbxfBSrXQIT8=
+github.com/stephenafamo/bob v0.39.0/go.mod h1:r607RsKJSXA2XQv7tUSHZpvX1HrK6dzNrM4Xf5GJ7VE=
 github.com/stephenafamo/fakedb v0.0.0-20221230081958-0b86f816ed97 h1:XItoZNmhOih06TC02jK7l3wlpZ0XT/sPQYutDcGOQjg=
 github.com/stephenafamo/fakedb v0.0.0-20221230081958-0b86f816ed97/go.mod h1:bM3Vmw1IakoaXocHmMIGgJFYob0vuK+CFWiJHQvz0jQ=
 github.com/stephenafamo/scan v0.6.2 h1:mEjx1P1MuimqALCXfZEV8+KAiVcByrgngqKatgHag9I=
 github.com/stephenafamo/scan v0.6.2/go.mod h1:FhIUJ8pLNyex36xGFiazDJJ5Xry0UkAi+RkWRrEcRMg=
+github.com/stephenafamo/scan v0.7.0 h1:lfFiD9H5+n4AdK3qNzXQjj2M3NfTOpmWBIA39NwB94c=
+github.com/stephenafamo/scan v0.7.0/go.mod h1:FhIUJ8pLNyex36xGFiazDJJ5Xry0UkAi+RkWRrEcRMg=
 github.com/stephenafamo/sqlparser v0.0.0-20250521201114-5cfed001272d h1:YmPQh4pYOjqGWllnvJ2EoMZe1a8RgAyBrw4cH2FfabY=
 github.com/stephenafamo/sqlparser v0.0.0-20250521201114-5cfed001272d/go.mod h1:2ATW++wFz7Mvc/N+nUtQnU+9VIGAxrn8m9JCLDSWMsQ=
 github.com/stoewer/go-strcase v1.3.1 h1:iS0MdW+kVTxgMoE1LAZyMiYJFKlOzLooE4MxjirtkAs=
