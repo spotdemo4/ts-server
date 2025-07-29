@@ -20,9 +20,8 @@ connectrpc.com/cors
 connectrpc.com/validate
 # github.com/aarondl/json v0.0.0-20221020222930-8b0db17ef1bf
 ## explicit; go 1.18
-github.com/aarondl/json
-# github.com/aarondl/opt v0.0.0-20230114172057-b91f370c41f0
-## explicit; go 1.18
+# github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65
+## explicit; go 1.24
 github.com/aarondl/opt
 github.com/aarondl/opt/internal/globaldata
 # github.com/amacneil/dbmate/v2 v2.28.0
@@ -116,7 +115,7 @@ github.com/rs/cors/internal
 # github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3
 ## explicit; go 1.24.1
 github.com/spotdemo4/dbmate-sqlite-modernc/pkg/driver/sqlite
-# github.com/stephenafamo/bob v0.38.0
+# github.com/stephenafamo/bob v0.39.0
 ## explicit; go 1.24.0
 github.com/stephenafamo/bob
 github.com/stephenafamo/bob/clause
@@ -131,7 +130,7 @@ github.com/stephenafamo/bob/internal
 github.com/stephenafamo/bob/internal/mappings
 github.com/stephenafamo/bob/mods
 github.com/stephenafamo/bob/orm
-# github.com/stephenafamo/scan v0.6.2
+# github.com/stephenafamo/scan v0.7.0
 ## explicit; go 1.18
 github.com/stephenafamo/scan
 # github.com/stoewer/go-strcase v1.3.1
