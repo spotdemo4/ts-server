@@ -12,7 +12,7 @@
 
   inputs = {
     systems.url = "systems";
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
     utils = {
       url = "github:numtide/flake-utils";
       inputs.systems.follows = "systems";
@@ -44,28 +44,6 @@
         inherit system;
         overlays = [nur.overlays.default];
       };
-
-      ts-server = pkgs.buildGoModule (finalAttrs: {
-        pname = "ts-server";
-        version = "0.0.20";
-        src = ./.;
-        goSum = ./go.sum;
-        vendorHash = null;
-        env.CGO_ENABLED = 0;
-
-        preBuild = ''
-          cp -r ${ts-web.packages."${system}".default} client
-        '';
-
-        meta = {
-          description = "A simple GO CRUD app";
-          mainProgram = "ts-server";
-          homepage = "https://github.com/spotdemo4/ts-server";
-          changelog = "https://github.com/spotdemo4/ts-server/releases/tag/v${finalAttrs.version}";
-          license = pkgs.lib.licenses.mit;
-          platforms = pkgs.lib.platforms.all;
-        };
-      });
     in rec {
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
@@ -94,10 +72,10 @@
           alejandra
 
           # Actions
-          renovate
           action-validator
           prettier
           docker-client
+          pkgs.nur.repos.trev.renovate
         ];
         shellHook = pkgs.nur.repos.trev.shellhook.ref;
       };
@@ -110,19 +88,22 @@
               revive
               sqlfluff
               alejandra
-              renovate
               action-validator
               prettier
+              pkgs.nur.repos.trev.renovate
             ];
             script = ''
               revive -config revive.toml -set_exit_status ./...
               sqlfluff lint
               alejandra -c .
-              renovate-config-validator
               action-validator .github/workflows/*
               action-validator .gitea/workflows/*
               action-validator .forgejo/workflows/*
               prettier --check .
+              renovate-config-validator
+              renovate-config-validator .github/renovate-global.json
+              renovate-config-validator .gitea/renovate-global.json
+              renovate-config-validator .forgejo/renovate-global.json
             '';
           };
           scan = {
@@ -147,14 +128,34 @@
           };
         }
         // {
-          build = ts-server.overrideAttrs {
+          build = packages.default.overrideAttrs {
             doCheck = true;
           };
           shell = devShells.default;
         };
 
       packages = with pkgs.nur.repos.trev.lib; rec {
-        default = ts-server;
+        default = pkgs.buildGoModule (finalAttrs: {
+          pname = "ts-server";
+          version = "0.0.20";
+          src = ./.;
+          goSum = ./go.sum;
+          vendorHash = null;
+          env.CGO_ENABLED = 0;
+
+          preBuild = ''
+            cp -r ${ts-web.packages."${system}".default} client
+          '';
+
+          meta = {
+            description = "A simple GO CRUD app";
+            mainProgram = "ts-server";
+            homepage = "https://github.com/spotdemo4/ts-server";
+            changelog = "https://github.com/spotdemo4/ts-server/releases/tag/v${finalAttrs.version}";
+            license = pkgs.lib.licenses.mit;
+            platforms = pkgs.lib.platforms.all;
+          };
+        });
         linux-amd64 = go.moduleToPlatform default "linux" "amd64";
         linux-arm64 = go.moduleToPlatform default "linux" "arm64";
         linux-arm = go.moduleToPlatform default "linux" "arm";
