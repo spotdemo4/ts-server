@@ -9,7 +9,7 @@ require (
 	connectrpc.com/validate v0.3.0
 	github.com/amacneil/dbmate/v2 v2.28.0
 	github.com/go-webauthn/webauthn v0.13.4
-	github.com/golang-jwt/jwt/v5 v5.2.3
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/jaswdr/faker/v2 v2.6.0
 	github.com/joho/godotenv v1.5.1
