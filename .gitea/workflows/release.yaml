@@ -43,7 +43,7 @@ jobs:
           zip -j ts-server-windows-amd64.zip result/bin/ts-server.exe
           mv ts-server-windows-amd64.zip binaries
 
-      - uses: https://gitea.com/actions/gitea-release-action@f66c1c98f12e032443e806fae4882a05368df40c # v1
+      - uses: https://gitea.com/actions/gitea-release-action@fe8e0322804b48e34e3bddbbf6335bd2b1046eb7 # v1
         with:
           files: |-
             binaries/*
