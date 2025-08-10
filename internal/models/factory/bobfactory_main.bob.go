@@ -3,7 +3,13 @@
 
 package factory
 
-import "context"
+import (
+	"context"
+	"time"
+
+	"github.com/aarondl/opt/null"
+	models "github.com/spotdemo4/ts-server/internal/models"
+)
 
 type Factory struct {
 	baseCredentialMods      CredentialModSlice
@@ -17,7 +23,11 @@ func New() *Factory {
 	return &Factory{}
 }
 
-func (f *Factory) NewCredential(ctx context.Context, mods ...CredentialMod) *CredentialTemplate {
+func (f *Factory) NewCredential(mods ...CredentialMod) *CredentialTemplate {
+	return f.NewCredentialWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewCredentialWithContext(ctx context.Context, mods ...CredentialMod) *CredentialTemplate {
 	o := &CredentialTemplate{f: f}
 
 	if f != nil {
@@ -29,7 +39,35 @@ func (f *Factory) NewCredential(ctx context.Context, mods ...CredentialMod) *Cre
 	return o
 }
 
-func (f *Factory) NewFile(ctx context.Context, mods ...FileMod) *FileTemplate {
+func (f *Factory) FromExistingCredential(m *models.Credential) *CredentialTemplate {
+	o := &CredentialTemplate{f: f, alreadyPersisted: true}
+
+	o.CredID = func() string { return m.CredID }
+	o.CredPublicKey = func() []byte { return m.CredPublicKey }
+	o.SignCount = func() int32 { return m.SignCount }
+	o.Transports = func() null.Val[string] { return m.Transports }
+	o.UserVerified = func() null.Val[bool] { return m.UserVerified }
+	o.BackupEligible = func() null.Val[bool] { return m.BackupEligible }
+	o.BackupState = func() null.Val[bool] { return m.BackupState }
+	o.AttestationObject = func() null.Val[[]byte] { return m.AttestationObject }
+	o.AttestationClientData = func() null.Val[[]byte] { return m.AttestationClientData }
+	o.CreatedAt = func() time.Time { return m.CreatedAt }
+	o.LastUsed = func() time.Time { return m.LastUsed }
+	o.UserID = func() int32 { return m.UserID }
+
+	ctx := context.Background()
+	if m.R.User != nil {
+		CredentialMods.WithExistingUser(m.R.User).Apply(ctx, o)
+	}
+
+	return o
+}
+
+func (f *Factory) NewFile(mods ...FileMod) *FileTemplate {
+	return f.NewFileWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewFileWithContext(ctx context.Context, mods ...FileMod) *FileTemplate {
 	o := &FileTemplate{f: f}
 
 	if f != nil {
@@ -41,7 +79,30 @@ func (f *Factory) NewFile(ctx context.Context, mods ...FileMod) *FileTemplate {
 	return o
 }
 
-func (f *Factory) NewItem(ctx context.Context, mods ...ItemMod) *ItemTemplate {
+func (f *Factory) FromExistingFile(m *models.File) *FileTemplate {
+	o := &FileTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int32 { return m.ID }
+	o.Name = func() string { return m.Name }
+	o.Data = func() []byte { return m.Data }
+	o.UserID = func() int32 { return m.UserID }
+
+	ctx := context.Background()
+	if m.R.User != nil {
+		FileMods.WithExistingUser(m.R.User).Apply(ctx, o)
+	}
+	if len(m.R.ProfilePictureUsers) > 0 {
+		FileMods.AddExistingProfilePictureUsers(m.R.ProfilePictureUsers...).Apply(ctx, o)
+	}
+
+	return o
+}
+
+func (f *Factory) NewItem(mods ...ItemMod) *ItemTemplate {
+	return f.NewItemWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewItemWithContext(ctx context.Context, mods ...ItemMod) *ItemTemplate {
 	o := &ItemTemplate{f: f}
 
 	if f != nil {
@@ -53,7 +114,30 @@ func (f *Factory) NewItem(ctx context.Context, mods ...ItemMod) *ItemTemplate {
 	return o
 }
 
-func (f *Factory) NewSchemaMigration(ctx context.Context, mods ...SchemaMigrationMod) *SchemaMigrationTemplate {
+func (f *Factory) FromExistingItem(m *models.Item) *ItemTemplate {
+	o := &ItemTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int32 { return m.ID }
+	o.Name = func() string { return m.Name }
+	o.Added = func() time.Time { return m.Added }
+	o.Description = func() string { return m.Description }
+	o.Price = func() float32 { return m.Price }
+	o.Quantity = func() int32 { return m.Quantity }
+	o.UserID = func() int32 { return m.UserID }
+
+	ctx := context.Background()
+	if m.R.User != nil {
+		ItemMods.WithExistingUser(m.R.User).Apply(ctx, o)
+	}
+
+	return o
+}
+
+func (f *Factory) NewSchemaMigration(mods ...SchemaMigrationMod) *SchemaMigrationTemplate {
+	return f.NewSchemaMigrationWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewSchemaMigrationWithContext(ctx context.Context, mods ...SchemaMigrationMod) *SchemaMigrationTemplate {
 	o := &SchemaMigrationTemplate{f: f}
 
 	if f != nil {
@@ -65,7 +149,19 @@ func (f *Factory) NewSchemaMigration(ctx context.Context, mods ...SchemaMigratio
 	return o
 }
 
-func (f *Factory) NewUser(ctx context.Context, mods ...UserMod) *UserTemplate {
+func (f *Factory) FromExistingSchemaMigration(m *models.SchemaMigration) *SchemaMigrationTemplate {
+	o := &SchemaMigrationTemplate{f: f, alreadyPersisted: true}
+
+	o.Version = func() string { return m.Version }
+
+	return o
+}
+
+func (f *Factory) NewUser(mods ...UserMod) *UserTemplate {
+	return f.NewUserWithContext(context.Background(), mods...)
+}
+
+func (f *Factory) NewUserWithContext(ctx context.Context, mods ...UserMod) *UserTemplate {
 	o := &UserTemplate{f: f}
 
 	if f != nil {
@@ -73,6 +169,32 @@ func (f *Factory) NewUser(ctx context.Context, mods ...UserMod) *UserTemplate {
 	}
 
 	UserModSlice(mods).Apply(ctx, o)
+
+	return o
+}
+
+func (f *Factory) FromExistingUser(m *models.User) *UserTemplate {
+	o := &UserTemplate{f: f, alreadyPersisted: true}
+
+	o.ID = func() int32 { return m.ID }
+	o.Username = func() string { return m.Username }
+	o.Password = func() string { return m.Password }
+	o.ProfilePictureID = func() null.Val[int32] { return m.ProfilePictureID }
+	o.WebauthnID = func() string { return m.WebauthnID }
+
+	ctx := context.Background()
+	if len(m.R.Credentials) > 0 {
+		UserMods.AddExistingCredentials(m.R.Credentials...).Apply(ctx, o)
+	}
+	if len(m.R.Files) > 0 {
+		UserMods.AddExistingFiles(m.R.Files...).Apply(ctx, o)
+	}
+	if len(m.R.Items) > 0 {
+		UserMods.AddExistingItems(m.R.Items...).Apply(ctx, o)
+	}
+	if m.R.ProfilePictureFile != nil {
+		UserMods.WithExistingProfilePictureFile(m.R.ProfilePictureFile).Apply(ctx, o)
+	}
 
 	return o
 }

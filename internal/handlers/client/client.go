@@ -5,11 +5,11 @@ import (
 	"io/fs"
 	"net/http"
 
-	"github.com/spotdemo4/ts-server/internal/auth"
+	"github.com/spotdemo4/ts-server/internal/app"
 	"github.com/spotdemo4/ts-server/internal/interceptors"
 )
 
-func NewClientHandler(auth *auth.Auth, clientFS embed.FS) http.Handler {
+func New(app *app.App, clientFS embed.FS) http.Handler {
 	entries, err := clientFS.ReadDir(".")
 	if err != nil || len(entries) == 0 {
 		return http.NotFoundHandler()
@@ -21,5 +21,5 @@ func NewClientHandler(auth *auth.Auth, clientFS embed.FS) http.Handler {
 	}
 
 	fs := http.FS(client)
-	return interceptors.WithAuthRedirect(http.FileServer(fs), auth)
+	return interceptors.WithAuthRedirect(http.FileServer(fs), app.Auth)
 }

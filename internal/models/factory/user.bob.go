@@ -5,9 +5,11 @@ package factory
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
+	"github.com/aarondl/opt/null"
+	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/jaswdr/faker/v2"
 	models "github.com/spotdemo4/ts-server/internal/models"
 	"github.com/stephenafamo/bob"
@@ -37,11 +39,13 @@ type UserTemplate struct {
 	ID               func() int32
 	Username         func() string
 	Password         func() string
-	ProfilePictureID func() sql.Null[int32]
+	ProfilePictureID func() null.Val[int32]
 	WebauthnID       func() string
 
 	r userR
 	f *Factory
+
+	alreadyPersisted bool
 }
 
 type userR struct {
@@ -119,7 +123,7 @@ func (t UserTemplate) setModelRels(o *models.User) {
 	if t.r.ProfilePictureFile != nil {
 		rel := t.r.ProfilePictureFile.o.Build()
 		rel.R.ProfilePictureUsers = append(rel.R.ProfilePictureUsers, o)
-		o.ProfilePictureID = sql.Null[int32]{V: rel.ID, Valid: true} // h2
+		o.ProfilePictureID = null.From(rel.ID) // h2
 		o.R.ProfilePictureFile = rel
 	}
 }
@@ -131,23 +135,23 @@ func (o UserTemplate) BuildSetter() *models.UserSetter {
 
 	if o.ID != nil {
 		val := o.ID()
-		m.ID = &val
+		m.ID = omit.From(val)
 	}
 	if o.Username != nil {
 		val := o.Username()
-		m.Username = &val
+		m.Username = omit.From(val)
 	}
 	if o.Password != nil {
 		val := o.Password()
-		m.Password = &val
+		m.Password = omit.From(val)
 	}
 	if o.ProfilePictureID != nil {
 		val := o.ProfilePictureID()
-		m.ProfilePictureID = &val
+		m.ProfilePictureID = omitnull.FromNull(val)
 	}
 	if o.WebauthnID != nil {
 		val := o.WebauthnID()
-		m.WebauthnID = &val
+		m.WebauthnID = omit.From(val)
 	}
 
 	return m
@@ -206,39 +210,42 @@ func (o UserTemplate) BuildMany(number int) models.UserSlice {
 }
 
 func ensureCreatableUser(m *models.UserSetter) {
-	if m.Username == nil {
+	if !(m.Username.IsValue()) {
 		val := random_string(nil)
-		m.Username = &val
+		m.Username = omit.From(val)
 	}
-	if m.Password == nil {
+	if !(m.Password.IsValue()) {
 		val := random_string(nil)
-		m.Password = &val
+		m.Password = omit.From(val)
 	}
-	if m.WebauthnID == nil {
+	if !(m.WebauthnID.IsValue()) {
 		val := random_string(nil)
-		m.WebauthnID = &val
+		m.WebauthnID = omit.From(val)
 	}
 }
 
 // insertOptRels creates and inserts any optional the relationships on *models.User
 // according to the relationships in the template.
 // any required relationship should have already exist on the model
-func (o *UserTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.User) (context.Context, error) {
+func (o *UserTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.User) error {
 	var err error
 
 	isCredentialsDone, _ := userRelCredentialsCtx.Value(ctx)
 	if !isCredentialsDone && o.r.Credentials != nil {
 		ctx = userRelCredentialsCtx.WithValue(ctx, true)
 		for _, r := range o.r.Credentials {
-			var rel0 models.CredentialSlice
-			ctx, rel0, err = r.o.createMany(ctx, exec, r.number)
-			if err != nil {
-				return ctx, err
-			}
+			if r.o.alreadyPersisted {
+				m.R.Credentials = append(m.R.Credentials, r.o.Build())
+			} else {
+				rel0, err := r.o.CreateMany(ctx, exec, r.number)
+				if err != nil {
+					return err
+				}
 
-			err = m.AttachCredentials(ctx, exec, rel0...)
-			if err != nil {
-				return ctx, err
+				err = m.AttachCredentials(ctx, exec, rel0...)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -247,15 +254,18 @@ func (o *UserTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *
 	if !isFilesDone && o.r.Files != nil {
 		ctx = userRelFilesCtx.WithValue(ctx, true)
 		for _, r := range o.r.Files {
-			var rel1 models.FileSlice
-			ctx, rel1, err = r.o.createMany(ctx, exec, r.number)
-			if err != nil {
-				return ctx, err
-			}
+			if r.o.alreadyPersisted {
+				m.R.Files = append(m.R.Files, r.o.Build())
+			} else {
+				rel1, err := r.o.CreateMany(ctx, exec, r.number)
+				if err != nil {
+					return err
+				}
 
-			err = m.AttachFiles(ctx, exec, rel1...)
-			if err != nil {
-				return ctx, err
+				err = m.AttachFiles(ctx, exec, rel1...)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -264,15 +274,18 @@ func (o *UserTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *
 	if !isItemsDone && o.r.Items != nil {
 		ctx = userRelItemsCtx.WithValue(ctx, true)
 		for _, r := range o.r.Items {
-			var rel2 models.ItemSlice
-			ctx, rel2, err = r.o.createMany(ctx, exec, r.number)
-			if err != nil {
-				return ctx, err
-			}
+			if r.o.alreadyPersisted {
+				m.R.Items = append(m.R.Items, r.o.Build())
+			} else {
+				rel2, err := r.o.CreateMany(ctx, exec, r.number)
+				if err != nil {
+					return err
+				}
 
-			err = m.AttachItems(ctx, exec, rel2...)
-			if err != nil {
-				return ctx, err
+				err = m.AttachItems(ctx, exec, rel2...)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -280,25 +293,40 @@ func (o *UserTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *
 	isProfilePictureFileDone, _ := userRelProfilePictureFileCtx.Value(ctx)
 	if !isProfilePictureFileDone && o.r.ProfilePictureFile != nil {
 		ctx = userRelProfilePictureFileCtx.WithValue(ctx, true)
-		var rel3 *models.File
-		ctx, rel3, err = o.r.ProfilePictureFile.o.create(ctx, exec)
-		if err != nil {
-			return ctx, err
-		}
-		err = m.AttachProfilePictureFile(ctx, exec, rel3)
-		if err != nil {
-			return ctx, err
+		if o.r.ProfilePictureFile.o.alreadyPersisted {
+			m.R.ProfilePictureFile = o.r.ProfilePictureFile.o.Build()
+		} else {
+			var rel3 *models.File
+			rel3, err = o.r.ProfilePictureFile.o.Create(ctx, exec)
+			if err != nil {
+				return err
+			}
+			err = m.AttachProfilePictureFile(ctx, exec, rel3)
+			if err != nil {
+				return err
+			}
 		}
 
 	}
 
-	return ctx, err
+	return err
 }
 
 // Create builds a user and inserts it into the database
 // Relations objects are also inserted and placed in the .R field
 func (o *UserTemplate) Create(ctx context.Context, exec bob.Executor) (*models.User, error) {
-	_, m, err := o.create(ctx, exec)
+	var err error
+	opt := o.BuildSetter()
+	ensureCreatableUser(opt)
+
+	m, err := models.Users.Insert(opt).One(ctx, exec)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := o.insertOptRels(ctx, exec, m); err != nil {
+		return nil, err
+	}
 	return m, err
 }
 
@@ -306,7 +334,7 @@ func (o *UserTemplate) Create(ctx context.Context, exec bob.Executor) (*models.U
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o *UserTemplate) MustCreate(ctx context.Context, exec bob.Executor) *models.User {
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		panic(err)
 	}
@@ -318,7 +346,7 @@ func (o *UserTemplate) MustCreate(ctx context.Context, exec bob.Executor) *model
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o *UserTemplate) CreateOrFail(ctx context.Context, tb testing.TB, exec bob.Executor) *models.User {
 	tb.Helper()
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
@@ -326,36 +354,27 @@ func (o *UserTemplate) CreateOrFail(ctx context.Context, tb testing.TB, exec bob
 	return m
 }
 
-// create builds a user and inserts it into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted model
-func (o *UserTemplate) create(ctx context.Context, exec bob.Executor) (context.Context, *models.User, error) {
-	var err error
-	opt := o.BuildSetter()
-	ensureCreatableUser(opt)
-
-	m, err := models.Users.Insert(opt).One(ctx, exec)
-	if err != nil {
-		return ctx, nil, err
-	}
-	ctx = userCtx.WithValue(ctx, m)
-
-	ctx, err = o.insertOptRels(ctx, exec, m)
-	return ctx, m, err
-}
-
 // CreateMany builds multiple users and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 func (o UserTemplate) CreateMany(ctx context.Context, exec bob.Executor, number int) (models.UserSlice, error) {
-	_, m, err := o.createMany(ctx, exec, number)
-	return m, err
+	var err error
+	m := make(models.UserSlice, number)
+
+	for i := range m {
+		m[i], err = o.Create(ctx, exec)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return m, nil
 }
 
 // MustCreateMany builds multiple users and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o UserTemplate) MustCreateMany(ctx context.Context, exec bob.Executor, number int) models.UserSlice {
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		panic(err)
 	}
@@ -367,29 +386,12 @@ func (o UserTemplate) MustCreateMany(ctx context.Context, exec bob.Executor, num
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o UserTemplate) CreateManyOrFail(ctx context.Context, tb testing.TB, exec bob.Executor, number int) models.UserSlice {
 	tb.Helper()
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
 	}
 	return m
-}
-
-// createMany builds multiple users and inserts them into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted models
-func (o UserTemplate) createMany(ctx context.Context, exec bob.Executor, number int) (context.Context, models.UserSlice, error) {
-	var err error
-	m := make(models.UserSlice, number)
-
-	for i := range m {
-		ctx, m[i], err = o.create(ctx, exec)
-		if err != nil {
-			return ctx, nil, err
-		}
-	}
-
-	return ctx, m, nil
 }
 
 // User has methods that act as mods for the UserTemplate
@@ -501,14 +503,14 @@ func (m userMods) RandomPassword(f *faker.Faker) UserMod {
 }
 
 // Set the model columns to this value
-func (m userMods) ProfilePictureID(val sql.Null[int32]) UserMod {
+func (m userMods) ProfilePictureID(val null.Val[int32]) UserMod {
 	return UserModFunc(func(_ context.Context, o *UserTemplate) {
-		o.ProfilePictureID = func() sql.Null[int32] { return val }
+		o.ProfilePictureID = func() null.Val[int32] { return val }
 	})
 }
 
 // Set the Column from the function
-func (m userMods) ProfilePictureIDFunc(f func() sql.Null[int32]) UserMod {
+func (m userMods) ProfilePictureIDFunc(f func() null.Val[int32]) UserMod {
 	return UserModFunc(func(_ context.Context, o *UserTemplate) {
 		o.ProfilePictureID = f
 	})
@@ -526,13 +528,13 @@ func (m userMods) UnsetProfilePictureID() UserMod {
 // The generated value is sometimes null
 func (m userMods) RandomProfilePictureID(f *faker.Faker) UserMod {
 	return UserModFunc(func(_ context.Context, o *UserTemplate) {
-		o.ProfilePictureID = func() sql.Null[int32] {
+		o.ProfilePictureID = func() null.Val[int32] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_int32(f)
-			return sql.Null[int32]{V: val, Valid: f.Bool()}
+			return null.From(val)
 		}
 	})
 }
@@ -542,13 +544,13 @@ func (m userMods) RandomProfilePictureID(f *faker.Faker) UserMod {
 // The generated value is never null
 func (m userMods) RandomProfilePictureIDNotNull(f *faker.Faker) UserMod {
 	return UserModFunc(func(_ context.Context, o *UserTemplate) {
-		o.ProfilePictureID = func() sql.Null[int32] {
+		o.ProfilePictureID = func() null.Val[int32] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_int32(f)
-			return sql.Null[int32]{V: val, Valid: true}
+			return null.From(val)
 		}
 	})
 }
@@ -592,7 +594,7 @@ func (m userMods) WithParentsCascading() UserMod {
 		ctx = userWithParentsCascadingCtx.WithValue(ctx, true)
 		{
 
-			related := o.f.NewFile(ctx, FileMods.WithParentsCascading())
+			related := o.f.NewFileWithContext(ctx, FileMods.WithParentsCascading())
 			m.WithProfilePictureFile(related).Apply(ctx, o)
 		}
 	})
@@ -608,9 +610,17 @@ func (m userMods) WithProfilePictureFile(rel *FileTemplate) UserMod {
 
 func (m userMods) WithNewProfilePictureFile(mods ...FileMod) UserMod {
 	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
-		related := o.f.NewFile(ctx, mods...)
+		related := o.f.NewFileWithContext(ctx, mods...)
 
 		m.WithProfilePictureFile(related).Apply(ctx, o)
+	})
+}
+
+func (m userMods) WithExistingProfilePictureFile(em *models.File) UserMod {
+	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
+		o.r.ProfilePictureFile = &userRProfilePictureFileR{
+			o: o.f.FromExistingFile(em),
+		}
 	})
 }
 
@@ -631,7 +641,7 @@ func (m userMods) WithCredentials(number int, related *CredentialTemplate) UserM
 
 func (m userMods) WithNewCredentials(number int, mods ...CredentialMod) UserMod {
 	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
-		related := o.f.NewCredential(ctx, mods...)
+		related := o.f.NewCredentialWithContext(ctx, mods...)
 		m.WithCredentials(number, related).Apply(ctx, o)
 	})
 }
@@ -647,8 +657,18 @@ func (m userMods) AddCredentials(number int, related *CredentialTemplate) UserMo
 
 func (m userMods) AddNewCredentials(number int, mods ...CredentialMod) UserMod {
 	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
-		related := o.f.NewCredential(ctx, mods...)
+		related := o.f.NewCredentialWithContext(ctx, mods...)
 		m.AddCredentials(number, related).Apply(ctx, o)
+	})
+}
+
+func (m userMods) AddExistingCredentials(existingModels ...*models.Credential) UserMod {
+	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
+		for _, em := range existingModels {
+			o.r.Credentials = append(o.r.Credentials, &userRCredentialsR{
+				o: o.f.FromExistingCredential(em),
+			})
+		}
 	})
 }
 
@@ -669,7 +689,7 @@ func (m userMods) WithFiles(number int, related *FileTemplate) UserMod {
 
 func (m userMods) WithNewFiles(number int, mods ...FileMod) UserMod {
 	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
-		related := o.f.NewFile(ctx, mods...)
+		related := o.f.NewFileWithContext(ctx, mods...)
 		m.WithFiles(number, related).Apply(ctx, o)
 	})
 }
@@ -685,8 +705,18 @@ func (m userMods) AddFiles(number int, related *FileTemplate) UserMod {
 
 func (m userMods) AddNewFiles(number int, mods ...FileMod) UserMod {
 	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
-		related := o.f.NewFile(ctx, mods...)
+		related := o.f.NewFileWithContext(ctx, mods...)
 		m.AddFiles(number, related).Apply(ctx, o)
+	})
+}
+
+func (m userMods) AddExistingFiles(existingModels ...*models.File) UserMod {
+	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
+		for _, em := range existingModels {
+			o.r.Files = append(o.r.Files, &userRFilesR{
+				o: o.f.FromExistingFile(em),
+			})
+		}
 	})
 }
 
@@ -707,7 +737,7 @@ func (m userMods) WithItems(number int, related *ItemTemplate) UserMod {
 
 func (m userMods) WithNewItems(number int, mods ...ItemMod) UserMod {
 	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
-		related := o.f.NewItem(ctx, mods...)
+		related := o.f.NewItemWithContext(ctx, mods...)
 		m.WithItems(number, related).Apply(ctx, o)
 	})
 }
@@ -723,8 +753,18 @@ func (m userMods) AddItems(number int, related *ItemTemplate) UserMod {
 
 func (m userMods) AddNewItems(number int, mods ...ItemMod) UserMod {
 	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
-		related := o.f.NewItem(ctx, mods...)
+		related := o.f.NewItemWithContext(ctx, mods...)
 		m.AddItems(number, related).Apply(ctx, o)
+	})
+}
+
+func (m userMods) AddExistingItems(existingModels ...*models.Item) UserMod {
+	return UserModFunc(func(ctx context.Context, o *UserTemplate) {
+		for _, em := range existingModels {
+			o.r.Items = append(o.r.Items, &userRItemsR{
+				o: o.f.FromExistingItem(em),
+			})
+		}
 	})
 }
 

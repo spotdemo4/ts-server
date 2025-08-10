@@ -54,7 +54,8 @@
           go
           gotools
           gopls
-          revive
+          golangci-lint
+          govulncheck
 
           # Database
           sqlite
@@ -68,13 +69,13 @@
           protoc-gen-connect-go
 
           # Nix
-          nix-update
           alejandra
+          flake-checker
 
           # Actions
           action-validator
           prettier
-          docker-client
+          skopeo
           pkgs.nur.repos.trev.renovate
         ];
         shellHook = pkgs.nur.repos.trev.shellhook.ref;
@@ -85,27 +86,28 @@
           lint = {
             src = ./.;
             deps = with pkgs; [
-              revive
+              go
+              golangci-lint
               sqlfluff
               alejandra
+              prettier
               action-validator
               prettier
               pkgs.nur.repos.trev.renovate
             ];
             script = ''
-              revive -config revive.toml -set_exit_status ./...
+              golangci-lint run ./...
               sqlfluff lint
               alejandra -c .
+              prettier --check .
               action-validator .github/workflows/*
               action-validator .gitea/workflows/*
-              action-validator .forgejo/workflows/*
-              prettier --check .
               renovate-config-validator
               renovate-config-validator .github/renovate-global.json
               renovate-config-validator .gitea/renovate-global.json
-              renovate-config-validator .forgejo/renovate-global.json
             '';
           };
+
           scan = {
             src = ./.;
             deps = [
@@ -115,6 +117,7 @@
               opengrep scan --quiet --error --config="${semgrep-rules}/go"
             '';
           };
+
           db = {
             src = ./.;
             deps = with pkgs; [
@@ -156,14 +159,24 @@
             platforms = pkgs.lib.platforms.all;
           };
         });
+
+        image = pkgs.dockerTools.streamLayeredImage {
+          name = "${default.pname}";
+          tag = "${default.version}";
+          created = "now";
+          contents = [default];
+          config = {
+            Cmd = [
+              "${pkgs.lib.meta.getExe default}"
+            ];
+          };
+        };
+
         linux-amd64 = go.moduleToPlatform default "linux" "amd64";
         linux-arm64 = go.moduleToPlatform default "linux" "arm64";
         linux-arm = go.moduleToPlatform default "linux" "arm";
         darwin-arm64 = go.moduleToPlatform default "darwin" "arm64";
         windows-amd64 = go.moduleToPlatform default "windows" "amd64";
-        linux-amd64-image = go.moduleToImage linux-amd64;
-        linux-arm64-image = go.moduleToImage linux-arm64;
-        linux-arm-image = go.moduleToImage linux-arm;
       };
 
       formatter = pkgs.alejandra;

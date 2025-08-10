@@ -18,12 +18,13 @@ connectrpc.com/cors
 # connectrpc.com/validate v0.3.0
 ## explicit; go 1.23.0
 connectrpc.com/validate
-# github.com/aarondl/json v0.0.0-20221020222930-8b0db17ef1bf
-## explicit; go 1.18
 # github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65
 ## explicit; go 1.24
 github.com/aarondl/opt
 github.com/aarondl/opt/internal/globaldata
+github.com/aarondl/opt/null
+github.com/aarondl/opt/omit
+github.com/aarondl/opt/omitnull
 # github.com/amacneil/dbmate/v2 v2.28.0
 ## explicit; go 1.23.0
 github.com/amacneil/dbmate/v2/pkg/dbmate

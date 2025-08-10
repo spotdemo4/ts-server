@@ -13,7 +13,7 @@ func TestCreateCredential(t *testing.T) {
 		t.Skip("skipping test, no DSN provided")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
 	tx, err := testDB.Begin(ctx)
@@ -27,7 +27,7 @@ func TestCreateCredential(t *testing.T) {
 		}
 	}()
 
-	if _, err := New().NewCredential(ctx).Create(ctx, tx); err != nil {
+	if _, err := New().NewCredentialWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating Credential: %v", err)
 	}
 }
@@ -37,7 +37,7 @@ func TestCreateFile(t *testing.T) {
 		t.Skip("skipping test, no DSN provided")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
 	tx, err := testDB.Begin(ctx)
@@ -51,7 +51,7 @@ func TestCreateFile(t *testing.T) {
 		}
 	}()
 
-	if _, err := New().NewFile(ctx).Create(ctx, tx); err != nil {
+	if _, err := New().NewFileWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating File: %v", err)
 	}
 }
@@ -61,7 +61,7 @@ func TestCreateItem(t *testing.T) {
 		t.Skip("skipping test, no DSN provided")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
 	tx, err := testDB.Begin(ctx)
@@ -75,7 +75,7 @@ func TestCreateItem(t *testing.T) {
 		}
 	}()
 
-	if _, err := New().NewItem(ctx).Create(ctx, tx); err != nil {
+	if _, err := New().NewItemWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating Item: %v", err)
 	}
 }
@@ -85,7 +85,7 @@ func TestCreateSchemaMigration(t *testing.T) {
 		t.Skip("skipping test, no DSN provided")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
 	tx, err := testDB.Begin(ctx)
@@ -99,7 +99,7 @@ func TestCreateSchemaMigration(t *testing.T) {
 		}
 	}()
 
-	if _, err := New().NewSchemaMigration(ctx).Create(ctx, tx); err != nil {
+	if _, err := New().NewSchemaMigrationWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating SchemaMigration: %v", err)
 	}
 }
@@ -109,7 +109,7 @@ func TestCreateUser(t *testing.T) {
 		t.Skip("skipping test, no DSN provided")
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 	t.Cleanup(cancel)
 
 	tx, err := testDB.Begin(ctx)
@@ -123,7 +123,7 @@ func TestCreateUser(t *testing.T) {
 		}
 	}()
 
-	if _, err := New().NewUser(ctx).Create(ctx, tx); err != nil {
+	if _, err := New().NewUserWithContext(ctx).Create(ctx, tx); err != nil {
 		t.Fatalf("Error creating User: %v", err)
 	}
 }

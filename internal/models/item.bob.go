@@ -9,6 +9,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/aarondl/opt/omit"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
@@ -135,69 +136,62 @@ type itemErrors struct {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type ItemSetter struct {
-	ID          *int32     `db:"id,pk" `
-	Name        *string    `db:"name" `
-	Added       *time.Time `db:"added" `
-	Description *string    `db:"description" `
-	Price       *float32   `db:"price" `
-	Quantity    *int32     `db:"quantity" `
-	UserID      *int32     `db:"user_id" `
+	ID          omit.Val[int32]     `db:"id,pk" `
+	Name        omit.Val[string]    `db:"name" `
+	Added       omit.Val[time.Time] `db:"added" `
+	Description omit.Val[string]    `db:"description" `
+	Price       omit.Val[float32]   `db:"price" `
+	Quantity    omit.Val[int32]     `db:"quantity" `
+	UserID      omit.Val[int32]     `db:"user_id" `
 }
 
 func (s ItemSetter) SetColumns() []string {
 	vals := make([]string, 0, 7)
-	if s.ID != nil {
+	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
-
-	if s.Name != nil {
+	if s.Name.IsValue() {
 		vals = append(vals, "name")
 	}
-
-	if s.Added != nil {
+	if s.Added.IsValue() {
 		vals = append(vals, "added")
 	}
-
-	if s.Description != nil {
+	if s.Description.IsValue() {
 		vals = append(vals, "description")
 	}
-
-	if s.Price != nil {
+	if s.Price.IsValue() {
 		vals = append(vals, "price")
 	}
-
-	if s.Quantity != nil {
+	if s.Quantity.IsValue() {
 		vals = append(vals, "quantity")
 	}
-
-	if s.UserID != nil {
+	if s.UserID.IsValue() {
 		vals = append(vals, "user_id")
 	}
-
 	return vals
 }
 
 func (s ItemSetter) Overwrite(t *Item) {
-	if s.ID != nil {
-		t.ID = *s.ID
+	if s.ID.IsValue() {
+		t.ID = s.ID.MustGet()
 	}
-	if s.Name != nil {
-		t.Name = *s.Name
+	if s.Name.IsValue() {
+		t.Name = s.Name.MustGet()
 	}
-	if s.Added != nil {
-		t.Added = *s.Added
+	if s.Added.IsValue() {
+		t.Added = s.Added.MustGet()
 	}
-	if s.Description != nil {
-		t.Description = *s.Description
+	if s.Description.IsValue() {
+		t.Description = s.Description.MustGet()
 	}
-	if s.Price != nil {
-		t.Price = *s.Price
+	if s.Price.IsValue() {
+		t.Price = s.Price.MustGet()
 	}
-	if s.Quantity != nil {
-		t.Quantity = *s.Quantity
+	if s.Quantity.IsValue() {
+		t.Quantity = s.Quantity.MustGet()
 	}
-	if s.UserID != nil {
-		t.UserID = *s.UserID
+	if s.UserID.IsValue() {
+		t.UserID = s.UserID.MustGet()
 	}
 }
 
@@ -216,32 +210,32 @@ func (s *ItemSetter) Apply(q *dialect.InsertQuery) {
 
 	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
 		vals := make([]bob.Expression, 0, 7)
-		if s.ID != nil {
-			vals = append(vals, sqlite.Arg(s.ID))
+		if s.ID.IsValue() {
+			vals = append(vals, sqlite.Arg(s.ID.MustGet()))
 		}
 
-		if s.Name != nil {
-			vals = append(vals, sqlite.Arg(s.Name))
+		if s.Name.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Name.MustGet()))
 		}
 
-		if s.Added != nil {
-			vals = append(vals, sqlite.Arg(s.Added))
+		if s.Added.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Added.MustGet()))
 		}
 
-		if s.Description != nil {
-			vals = append(vals, sqlite.Arg(s.Description))
+		if s.Description.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Description.MustGet()))
 		}
 
-		if s.Price != nil {
-			vals = append(vals, sqlite.Arg(s.Price))
+		if s.Price.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Price.MustGet()))
 		}
 
-		if s.Quantity != nil {
-			vals = append(vals, sqlite.Arg(s.Quantity))
+		if s.Quantity.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Quantity.MustGet()))
 		}
 
-		if s.UserID != nil {
-			vals = append(vals, sqlite.Arg(s.UserID))
+		if s.UserID.IsValue() {
+			vals = append(vals, sqlite.Arg(s.UserID.MustGet()))
 		}
 
 		if len(vals) == 0 {
@@ -259,49 +253,49 @@ func (s ItemSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 func (s ItemSetter) Expressions(prefix ...string) []bob.Expression {
 	exprs := make([]bob.Expression, 0, 7)
 
-	if s.ID != nil {
+	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "id")...),
 			sqlite.Arg(s.ID),
 		}})
 	}
 
-	if s.Name != nil {
+	if s.Name.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "name")...),
 			sqlite.Arg(s.Name),
 		}})
 	}
 
-	if s.Added != nil {
+	if s.Added.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "added")...),
 			sqlite.Arg(s.Added),
 		}})
 	}
 
-	if s.Description != nil {
+	if s.Description.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "description")...),
 			sqlite.Arg(s.Description),
 		}})
 	}
 
-	if s.Price != nil {
+	if s.Price.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "price")...),
 			sqlite.Arg(s.Price),
 		}})
 	}
 
-	if s.Quantity != nil {
+	if s.Quantity.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "quantity")...),
 			sqlite.Arg(s.Quantity),
 		}})
 	}
 
-	if s.UserID != nil {
+	if s.UserID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "user_id")...),
 			sqlite.Arg(s.UserID),
@@ -682,7 +676,12 @@ func (os ItemSlice) LoadUser(ctx context.Context, exec bob.Executor, mods ...bob
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		for _, rel := range users {
+
 			if o.UserID != rel.ID {
 				continue
 			}
@@ -699,7 +698,7 @@ func (os ItemSlice) LoadUser(ctx context.Context, exec bob.Executor, mods ...bob
 
 func attachItemUser0(ctx context.Context, exec bob.Executor, count int, item0 *Item, user1 *User) (*Item, error) {
 	setter := &ItemSetter{
-		UserID: &user1.ID,
+		UserID: omit.From(user1.ID),
 	}
 
 	err := item0.Update(ctx, exec, setter)

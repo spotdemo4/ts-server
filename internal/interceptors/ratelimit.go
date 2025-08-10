@@ -76,13 +76,16 @@ func (i *RatelimitInterceptor) WrapStreamingHandler(next connect.StreamingHandle
 	})
 }
 
+const RateLimit = 3 // Rate Limit up to 3 requests per second
+
+// getVisitor retrieves the visitor for the given user agent, or creates a new one if it doesn't exist.
 func (i *RatelimitInterceptor) getVisitor(userAgent string) *rate.Limiter {
 	i.mu.Lock()
 	defer i.mu.Unlock()
 
 	v, exists := i.visitors[userAgent]
 	if !exists {
-		limiter := rate.NewLimiter(1, 3)
+		limiter := rate.NewLimiter(1, RateLimit)
 		// Include the current time when creating a new visitor.
 		i.visitors[userAgent] = &visitor{limiter, time.Now()}
 		return limiter
@@ -93,8 +96,7 @@ func (i *RatelimitInterceptor) getVisitor(userAgent string) *rate.Limiter {
 	return v.limiter
 }
 
-// Every minute check the map for visitors that haven't been seen for
-// more than 3 minutes and delete the entries.
+// cleanupVisitors checks the map for visitors that haven't been seen for more than 3 minutes.
 func (i *RatelimitInterceptor) cleanupVisitors() {
 	for {
 		time.Sleep(time.Minute)

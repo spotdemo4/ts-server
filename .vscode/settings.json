@@ -2,10 +2,14 @@
 	"editor.formatOnSave": true,
 
 	// Go
-	"go.lintTool": "revive",
-	"go.formatTool": "goimports",
+	"go.lintTool": "golangci-lint-v2",
+	"go.lintFlags": ["--path-mode=abs", "--fast-only"],
+	"go.formatTool": "custom",
+	"go.alternateTools": {
+		"customFormatter": "golangci-lint-v2"
+	},
+	"go.formatFlags": ["fmt", "--stdin"],
 	"go.buildTags": "dev",
-	"go.lintFlags": ["--config=revive.toml"],
 	"gopls": { "ui.semanticTokens": true },
 	"[go]": {
 		"editor.defaultFormatter": "golang.go"
@@ -28,5 +32,9 @@
 	"nix.formatterPath": "alejandra",
 
 	// Prettier
-	"editor.defaultFormatter": "esbenp.prettier-vscode"
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+
+	"files.associations": {
+		".semgrepignore": "ignore"
+	}
 }

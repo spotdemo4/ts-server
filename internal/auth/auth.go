@@ -2,28 +2,33 @@ package auth
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strconv"
 
+	"github.com/aarondl/opt/null"
+	"github.com/aarondl/opt/omit"
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/spotdemo4/ts-server/internal/models"
-	"github.com/spotdemo4/ts-server/internal/putil"
 	"github.com/stephenafamo/bob"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/spotdemo4/ts-server/internal/models"
 )
 
 type Auth struct {
+	Web    *webauthn.WebAuthn
 	issuer string
 	key    string
 
 	db *bob.DB
 }
 
-func New(db *bob.DB, issuer string, key string) *Auth {
+// New creates a new Auth instance.
+func New(db *bob.DB, issuer string, key string, web *webauthn.WebAuthn) *Auth {
 	return &Auth{
+		Web:    web,
 		issuer: issuer,
 		key:    key,
 
@@ -36,7 +41,7 @@ type NewUserParams struct {
 	Password string
 }
 
-// Insert new user
+// NewUser creates a new user in the database.
 func (a *Auth) NewUser(ctx context.Context, params NewUserParams) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -45,9 +50,9 @@ func (a *Auth) NewUser(ctx context.Context, params NewUserParams) error {
 
 	_, err = models.Users.Insert(
 		&models.UserSetter{
-			Username:   &params.Username,
-			Password:   putil.ToPointer(string(hash)),
-			WebauthnID: putil.ToPointer(uuid.New().String()),
+			Username:   omit.From(params.Username),
+			Password:   omit.From(string(hash)),
+			WebauthnID: omit.From(uuid.New().String()),
 		},
 	).Exec(ctx, a.db)
 	if err != nil {
@@ -57,7 +62,7 @@ func (a *Auth) NewUser(ctx context.Context, params NewUserParams) error {
 	return nil
 }
 
-// userid -> db -> user
+// GetUser retrieves a user by their ID.
 func (a *Auth) GetUser(ctx context.Context, userid int32) (User, error) {
 	user, err := models.Users.Query(
 		models.SelectWhere.Users.ID.EQ(userid),
@@ -73,7 +78,7 @@ func (a *Auth) GetUser(ctx context.Context, userid int32) (User, error) {
 	}, nil
 }
 
-// username -> db -> user
+// GetUserByName retrieves a user by their username.
 func (a *Auth) GetUserByName(ctx context.Context, username string) (User, error) {
 	user, err := models.Users.Query(
 		models.SelectWhere.Users.Username.EQ(username),
@@ -90,13 +95,14 @@ func (a *Auth) GetUserByName(ctx context.Context, username string) (User, error)
 }
 
 type Claims struct {
+	jwt.RegisteredClaims
+
 	Password         string `json:"password"`
 	ProfilePictureID *int32 `json:"profilePictureID"`
 	WebauthnID       string `json:"webauthnID"`
-	jwt.RegisteredClaims
 }
 
-// token -> user
+// GetUserFromToken retrieves a user from a JWT token.
 func (a *Auth) GetUserFromToken(tokenString string) (User, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		// Don't forget to validate the alg is what you expect:
@@ -123,22 +129,13 @@ func (a *Auth) GetUserFromToken(tokenString string) (User, error) {
 		return User{}, errors.New("invalid id")
 	}
 
-	// Convert sql profile pictrue ID to int32
-	var ppid int32
-	if claims.ProfilePictureID != nil {
-		ppid = *claims.ProfilePictureID
-	}
-
 	return User{
 		User: models.User{
-			ID:       int32(userid),
-			Username: claims.Subject,
-			Password: claims.Password,
-			ProfilePictureID: sql.Null[int32]{
-				V:     ppid,
-				Valid: true,
-			},
-			WebauthnID: claims.WebauthnID,
+			ID:               int32(userid),
+			Username:         claims.Subject,
+			Password:         claims.Password,
+			ProfilePictureID: null.FromPtr(claims.ProfilePictureID),
+			WebauthnID:       claims.WebauthnID,
 		},
 
 		db:   a.db,
@@ -150,17 +147,15 @@ func (a *Auth) GetUserFromToken(tokenString string) (User, error) {
 // This prevents collisions with keys defined in other packages.
 type key int32
 
-// userKey is the key for user.User values in Contexts. It is
-// unexported; clients use user.NewContext and user.FromContext
-// instead of using this key directly.
+//nolint:gochecknoglobals // userKey is the key for user.User values in Contexts.
 var userKey key
 
-// user -> context
+// NewContext returns a new Context that carries value user.User.
 func (*Auth) NewContext(ctx context.Context, user User) context.Context {
 	return context.WithValue(ctx, userKey, user)
 }
 
-// context -> user
+// GetContext retrieves the user.User from the context, if it exists.
 func (*Auth) GetContext(ctx context.Context) (User, bool) {
 	u, ok := ctx.Value(userKey).(User)
 	return u, ok

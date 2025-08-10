@@ -5,9 +5,10 @@ package factory
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
+	"github.com/aarondl/opt/null"
+	"github.com/aarondl/opt/omit"
 	"github.com/jaswdr/faker/v2"
 	models "github.com/spotdemo4/ts-server/internal/models"
 	"github.com/stephenafamo/bob"
@@ -41,6 +42,8 @@ type FileTemplate struct {
 
 	r fileR
 	f *Factory
+
+	alreadyPersisted bool
 }
 
 type fileR struct {
@@ -78,7 +81,7 @@ func (t FileTemplate) setModelRels(o *models.File) {
 		for _, r := range t.r.ProfilePictureUsers {
 			related := r.o.BuildMany(r.number)
 			for _, rel := range related {
-				rel.ProfilePictureID = sql.Null[int32]{V: o.ID, Valid: true} // h2
+				rel.ProfilePictureID = null.From(o.ID) // h2
 				rel.R.ProfilePictureFile = o
 			}
 			rel = append(rel, related...)
@@ -94,19 +97,19 @@ func (o FileTemplate) BuildSetter() *models.FileSetter {
 
 	if o.ID != nil {
 		val := o.ID()
-		m.ID = &val
+		m.ID = omit.From(val)
 	}
 	if o.Name != nil {
 		val := o.Name()
-		m.Name = &val
+		m.Name = omit.From(val)
 	}
 	if o.Data != nil {
 		val := o.Data()
-		m.Data = &val
+		m.Data = omit.From(val)
 	}
 	if o.UserID != nil {
 		val := o.UserID()
-		m.UserID = &val
+		m.UserID = omit.From(val)
 	}
 
 	return m
@@ -162,50 +165,83 @@ func (o FileTemplate) BuildMany(number int) models.FileSlice {
 }
 
 func ensureCreatableFile(m *models.FileSetter) {
-	if m.Name == nil {
+	if !(m.Name.IsValue()) {
 		val := random_string(nil)
-		m.Name = &val
+		m.Name = omit.From(val)
 	}
-	if m.Data == nil {
+	if !(m.Data.IsValue()) {
 		val := random___byte(nil)
-		m.Data = &val
+		m.Data = omit.From(val)
 	}
-	if m.UserID == nil {
+	if !(m.UserID.IsValue()) {
 		val := random_int32(nil)
-		m.UserID = &val
+		m.UserID = omit.From(val)
 	}
 }
 
 // insertOptRels creates and inserts any optional the relationships on *models.File
 // according to the relationships in the template.
 // any required relationship should have already exist on the model
-func (o *FileTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.File) (context.Context, error) {
+func (o *FileTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.File) error {
 	var err error
 
 	isProfilePictureUsersDone, _ := fileRelProfilePictureUsersCtx.Value(ctx)
 	if !isProfilePictureUsersDone && o.r.ProfilePictureUsers != nil {
 		ctx = fileRelProfilePictureUsersCtx.WithValue(ctx, true)
 		for _, r := range o.r.ProfilePictureUsers {
-			var rel1 models.UserSlice
-			ctx, rel1, err = r.o.createMany(ctx, exec, r.number)
-			if err != nil {
-				return ctx, err
-			}
+			if r.o.alreadyPersisted {
+				m.R.ProfilePictureUsers = append(m.R.ProfilePictureUsers, r.o.Build())
+			} else {
+				rel1, err := r.o.CreateMany(ctx, exec, r.number)
+				if err != nil {
+					return err
+				}
 
-			err = m.AttachProfilePictureUsers(ctx, exec, rel1...)
-			if err != nil {
-				return ctx, err
+				err = m.AttachProfilePictureUsers(ctx, exec, rel1...)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
 
-	return ctx, err
+	return err
 }
 
 // Create builds a file and inserts it into the database
 // Relations objects are also inserted and placed in the .R field
 func (o *FileTemplate) Create(ctx context.Context, exec bob.Executor) (*models.File, error) {
-	_, m, err := o.create(ctx, exec)
+	var err error
+	opt := o.BuildSetter()
+	ensureCreatableFile(opt)
+
+	if o.r.User == nil {
+		FileMods.WithNewUser().Apply(ctx, o)
+	}
+
+	var rel0 *models.User
+
+	if o.r.User.o.alreadyPersisted {
+		rel0 = o.r.User.o.Build()
+	} else {
+		rel0, err = o.r.User.o.Create(ctx, exec)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	opt.UserID = omit.From(rel0.ID)
+
+	m, err := models.Files.Insert(opt).One(ctx, exec)
+	if err != nil {
+		return nil, err
+	}
+
+	m.R.User = rel0
+
+	if err := o.insertOptRels(ctx, exec, m); err != nil {
+		return nil, err
+	}
 	return m, err
 }
 
@@ -213,7 +249,7 @@ func (o *FileTemplate) Create(ctx context.Context, exec bob.Executor) (*models.F
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o *FileTemplate) MustCreate(ctx context.Context, exec bob.Executor) *models.File {
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		panic(err)
 	}
@@ -225,7 +261,7 @@ func (o *FileTemplate) MustCreate(ctx context.Context, exec bob.Executor) *model
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o *FileTemplate) CreateOrFail(ctx context.Context, tb testing.TB, exec bob.Executor) *models.File {
 	tb.Helper()
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
@@ -233,52 +269,27 @@ func (o *FileTemplate) CreateOrFail(ctx context.Context, tb testing.TB, exec bob
 	return m
 }
 
-// create builds a file and inserts it into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted model
-func (o *FileTemplate) create(ctx context.Context, exec bob.Executor) (context.Context, *models.File, error) {
-	var err error
-	opt := o.BuildSetter()
-	ensureCreatableFile(opt)
-
-	if o.r.User == nil {
-		FileMods.WithNewUser().Apply(ctx, o)
-	}
-
-	rel0, ok := userCtx.Value(ctx)
-	if !ok {
-		ctx, rel0, err = o.r.User.o.create(ctx, exec)
-		if err != nil {
-			return ctx, nil, err
-		}
-	}
-
-	opt.UserID = &rel0.ID
-
-	m, err := models.Files.Insert(opt).One(ctx, exec)
-	if err != nil {
-		return ctx, nil, err
-	}
-	ctx = fileCtx.WithValue(ctx, m)
-
-	m.R.User = rel0
-
-	ctx, err = o.insertOptRels(ctx, exec, m)
-	return ctx, m, err
-}
-
 // CreateMany builds multiple files and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 func (o FileTemplate) CreateMany(ctx context.Context, exec bob.Executor, number int) (models.FileSlice, error) {
-	_, m, err := o.createMany(ctx, exec, number)
-	return m, err
+	var err error
+	m := make(models.FileSlice, number)
+
+	for i := range m {
+		m[i], err = o.Create(ctx, exec)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return m, nil
 }
 
 // MustCreateMany builds multiple files and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o FileTemplate) MustCreateMany(ctx context.Context, exec bob.Executor, number int) models.FileSlice {
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		panic(err)
 	}
@@ -290,29 +301,12 @@ func (o FileTemplate) MustCreateMany(ctx context.Context, exec bob.Executor, num
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o FileTemplate) CreateManyOrFail(ctx context.Context, tb testing.TB, exec bob.Executor, number int) models.FileSlice {
 	tb.Helper()
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
 	}
 	return m
-}
-
-// createMany builds multiple files and inserts them into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted models
-func (o FileTemplate) createMany(ctx context.Context, exec bob.Executor, number int) (context.Context, models.FileSlice, error) {
-	var err error
-	m := make(models.FileSlice, number)
-
-	for i := range m {
-		ctx, m[i], err = o.create(ctx, exec)
-		if err != nil {
-			return ctx, nil, err
-		}
-	}
-
-	return ctx, m, nil
 }
 
 // File has methods that act as mods for the FileTemplate
@@ -461,7 +455,7 @@ func (m fileMods) WithParentsCascading() FileMod {
 		ctx = fileWithParentsCascadingCtx.WithValue(ctx, true)
 		{
 
-			related := o.f.NewUser(ctx, UserMods.WithParentsCascading())
+			related := o.f.NewUserWithContext(ctx, UserMods.WithParentsCascading())
 			m.WithUser(related).Apply(ctx, o)
 		}
 	})
@@ -477,9 +471,17 @@ func (m fileMods) WithUser(rel *UserTemplate) FileMod {
 
 func (m fileMods) WithNewUser(mods ...UserMod) FileMod {
 	return FileModFunc(func(ctx context.Context, o *FileTemplate) {
-		related := o.f.NewUser(ctx, mods...)
+		related := o.f.NewUserWithContext(ctx, mods...)
 
 		m.WithUser(related).Apply(ctx, o)
+	})
+}
+
+func (m fileMods) WithExistingUser(em *models.User) FileMod {
+	return FileModFunc(func(ctx context.Context, o *FileTemplate) {
+		o.r.User = &fileRUserR{
+			o: o.f.FromExistingUser(em),
+		}
 	})
 }
 
@@ -500,7 +502,7 @@ func (m fileMods) WithProfilePictureUsers(number int, related *UserTemplate) Fil
 
 func (m fileMods) WithNewProfilePictureUsers(number int, mods ...UserMod) FileMod {
 	return FileModFunc(func(ctx context.Context, o *FileTemplate) {
-		related := o.f.NewUser(ctx, mods...)
+		related := o.f.NewUserWithContext(ctx, mods...)
 		m.WithProfilePictureUsers(number, related).Apply(ctx, o)
 	})
 }
@@ -516,8 +518,18 @@ func (m fileMods) AddProfilePictureUsers(number int, related *UserTemplate) File
 
 func (m fileMods) AddNewProfilePictureUsers(number int, mods ...UserMod) FileMod {
 	return FileModFunc(func(ctx context.Context, o *FileTemplate) {
-		related := o.f.NewUser(ctx, mods...)
+		related := o.f.NewUserWithContext(ctx, mods...)
 		m.AddProfilePictureUsers(number, related).Apply(ctx, o)
+	})
+}
+
+func (m fileMods) AddExistingProfilePictureUsers(existingModels ...*models.User) FileMod {
+	return FileModFunc(func(ctx context.Context, o *FileTemplate) {
+		for _, em := range existingModels {
+			o.r.ProfilePictureUsers = append(o.r.ProfilePictureUsers, &fileRProfilePictureUsersR{
+				o: o.f.FromExistingUser(em),
+			})
+		}
 	})
 }
 

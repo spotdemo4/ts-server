@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/aarondl/opt/omit"
 	"github.com/jaswdr/faker/v2"
 	models "github.com/spotdemo4/ts-server/internal/models"
 	"github.com/stephenafamo/bob"
@@ -36,6 +37,8 @@ type SchemaMigrationTemplate struct {
 	Version func() string
 
 	f *Factory
+
+	alreadyPersisted bool
 }
 
 // Apply mods to the SchemaMigrationTemplate
@@ -56,7 +59,7 @@ func (o SchemaMigrationTemplate) BuildSetter() *models.SchemaMigrationSetter {
 
 	if o.Version != nil {
 		val := o.Version()
-		m.Version = &val
+		m.Version = omit.From(val)
 	}
 
 	return m
@@ -103,25 +106,36 @@ func (o SchemaMigrationTemplate) BuildMany(number int) models.SchemaMigrationSli
 }
 
 func ensureCreatableSchemaMigration(m *models.SchemaMigrationSetter) {
-	if m.Version == nil {
+	if !(m.Version.IsValue()) {
 		val := random_string(nil)
-		m.Version = &val
+		m.Version = omit.From(val)
 	}
 }
 
 // insertOptRels creates and inserts any optional the relationships on *models.SchemaMigration
 // according to the relationships in the template.
 // any required relationship should have already exist on the model
-func (o *SchemaMigrationTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.SchemaMigration) (context.Context, error) {
+func (o *SchemaMigrationTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.SchemaMigration) error {
 	var err error
 
-	return ctx, err
+	return err
 }
 
 // Create builds a schemaMigration and inserts it into the database
 // Relations objects are also inserted and placed in the .R field
 func (o *SchemaMigrationTemplate) Create(ctx context.Context, exec bob.Executor) (*models.SchemaMigration, error) {
-	_, m, err := o.create(ctx, exec)
+	var err error
+	opt := o.BuildSetter()
+	ensureCreatableSchemaMigration(opt)
+
+	m, err := models.SchemaMigrations.Insert(opt).One(ctx, exec)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := o.insertOptRels(ctx, exec, m); err != nil {
+		return nil, err
+	}
 	return m, err
 }
 
@@ -129,7 +143,7 @@ func (o *SchemaMigrationTemplate) Create(ctx context.Context, exec bob.Executor)
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o *SchemaMigrationTemplate) MustCreate(ctx context.Context, exec bob.Executor) *models.SchemaMigration {
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		panic(err)
 	}
@@ -141,7 +155,7 @@ func (o *SchemaMigrationTemplate) MustCreate(ctx context.Context, exec bob.Execu
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o *SchemaMigrationTemplate) CreateOrFail(ctx context.Context, tb testing.TB, exec bob.Executor) *models.SchemaMigration {
 	tb.Helper()
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
@@ -149,36 +163,27 @@ func (o *SchemaMigrationTemplate) CreateOrFail(ctx context.Context, tb testing.T
 	return m
 }
 
-// create builds a schemaMigration and inserts it into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted model
-func (o *SchemaMigrationTemplate) create(ctx context.Context, exec bob.Executor) (context.Context, *models.SchemaMigration, error) {
-	var err error
-	opt := o.BuildSetter()
-	ensureCreatableSchemaMigration(opt)
-
-	m, err := models.SchemaMigrations.Insert(opt).One(ctx, exec)
-	if err != nil {
-		return ctx, nil, err
-	}
-	ctx = schemaMigrationCtx.WithValue(ctx, m)
-
-	ctx, err = o.insertOptRels(ctx, exec, m)
-	return ctx, m, err
-}
-
 // CreateMany builds multiple schemaMigrations and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 func (o SchemaMigrationTemplate) CreateMany(ctx context.Context, exec bob.Executor, number int) (models.SchemaMigrationSlice, error) {
-	_, m, err := o.createMany(ctx, exec, number)
-	return m, err
+	var err error
+	m := make(models.SchemaMigrationSlice, number)
+
+	for i := range m {
+		m[i], err = o.Create(ctx, exec)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return m, nil
 }
 
 // MustCreateMany builds multiple schemaMigrations and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o SchemaMigrationTemplate) MustCreateMany(ctx context.Context, exec bob.Executor, number int) models.SchemaMigrationSlice {
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		panic(err)
 	}
@@ -190,29 +195,12 @@ func (o SchemaMigrationTemplate) MustCreateMany(ctx context.Context, exec bob.Ex
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o SchemaMigrationTemplate) CreateManyOrFail(ctx context.Context, tb testing.TB, exec bob.Executor, number int) models.SchemaMigrationSlice {
 	tb.Helper()
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
 	}
 	return m
-}
-
-// createMany builds multiple schemaMigrations and inserts them into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted models
-func (o SchemaMigrationTemplate) createMany(ctx context.Context, exec bob.Executor, number int) (context.Context, models.SchemaMigrationSlice, error) {
-	var err error
-	m := make(models.SchemaMigrationSlice, number)
-
-	for i := range m {
-		ctx, m[i], err = o.create(ctx, exec)
-		if err != nil {
-			return ctx, nil, err
-		}
-	}
-
-	return ctx, m, nil
 }
 
 // SchemaMigration has methods that act as mods for the SchemaMigrationTemplate

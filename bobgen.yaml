@@ -5,4 +5,3 @@ sql:
   pattern: db/schema.sql
   pkgname: models
   output: internal/models
-  type_system: github.com/aarondl/opt

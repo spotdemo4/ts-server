@@ -9,18 +9,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stephenafamo/bob"
+
+	"github.com/spotdemo4/ts-server/internal/app"
 	"github.com/spotdemo4/ts-server/internal/auth"
 	"github.com/spotdemo4/ts-server/internal/interceptors"
 	"github.com/spotdemo4/ts-server/internal/models"
-	"github.com/stephenafamo/bob"
 )
 
-type FileHandler struct {
+type Handler struct {
 	db   *bob.DB
 	auth *auth.Auth
 }
 
-func (h *FileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+const FilePathIndex = 2
+
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	user, ok := h.auth.GetContext(r.Context())
 	if !ok {
 		http.Redirect(w, r, "/auth", http.StatusFound)
@@ -35,11 +39,11 @@ func (h *FileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Get the file id from the path
 	pathItems := strings.Split(r.URL.Path, "/")
-	if len(pathItems) < 3 {
+	if len(pathItems) <= FilePathIndex {
 		http.Redirect(w, r, "/auth", http.StatusFound)
 		return
 	}
-	id, err := strconv.ParseInt(pathItems[2], 10, 32)
+	id, err := strconv.ParseInt(pathItems[FilePathIndex], 10, 32)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
@@ -64,12 +68,12 @@ func (h *FileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(w, r, file.Name, time.Time{}, buffer)
 }
 
-func NewFileHandler(db *bob.DB, auth *auth.Auth) http.Handler {
+func New(app *app.App) http.Handler {
 	return interceptors.WithAuthRedirect(
-		&FileHandler{
-			db:   db,
-			auth: auth,
+		&Handler{
+			db:   app.DB,
+			auth: app.Auth,
 		},
-		auth,
+		app.Auth,
 	)
 }

@@ -3,23 +3,11 @@
 
 package factory
 
-import (
-	"context"
-
-	models "github.com/spotdemo4/ts-server/internal/models"
-)
+import "context"
 
 type contextKey string
 
 var (
-	// Table context
-
-	credentialCtx      = newContextual[*models.Credential]("credential")
-	fileCtx            = newContextual[*models.File]("file")
-	itemCtx            = newContextual[*models.Item]("item")
-	schemaMigrationCtx = newContextual[*models.SchemaMigration]("schemaMigration")
-	userCtx            = newContextual[*models.User]("user")
-
 	// Relationship Contexts for credential
 	credentialWithParentsCascadingCtx = newContextual[bool]("credentialWithParentsCascading")
 	credentialRelUserCtx              = newContextual[bool]("credential.user.fk_credential_0")

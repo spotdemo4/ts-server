@@ -2,18 +2,21 @@ package auth
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/spotdemo4/ts-server/internal/models"
-	"github.com/spotdemo4/ts-server/internal/putil"
 	"github.com/stephenafamo/bob"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/spotdemo4/ts-server/internal/models"
 )
+
+const CookieMaxAge = 86400 // 1 day
 
 type User struct {
 	models.User
@@ -44,28 +47,17 @@ func (u User) WebAuthnCredentials() []webauthn.Credential {
 	return webcreds
 }
 
+// Validate checks if the provided password matches the user's password.
 func (u User) Validate(password string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }
 
-func (u User) ProfilePictureInt() *int32 {
-	var ppid *int32
-	if u.ProfilePictureID.Valid {
-		ppid = &u.ProfilePictureID.V
-	}
-
-	return ppid
-}
-
+// Token generates a JWT token for the user.
 func (u User) Token(expiration time.Time) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		Password:         u.Password,
-		ProfilePictureID: u.ProfilePictureInt(),
+		ProfilePictureID: u.ProfilePictureID.Ptr(),
 		WebauthnID:       u.WebauthnID,
 
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -89,20 +81,21 @@ func (u User) Token(expiration time.Time) string {
 	return tokenString
 }
 
+// Cookie returns a cookie with the user's token.
 func (u User) Cookie(expiration time.Duration) *http.Cookie {
 	return &http.Cookie{
 		Name:     "token",
 		Value:    u.Token(time.Now().Add(expiration)),
 		Path:     "/",
-		MaxAge:   86400,
+		MaxAge:   CookieMaxAge,
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 	}
 }
 
-// Insert/Update Profile Picture
-func (u *User) SetProfilePicture(ctx context.Context, name string, data []byte) error {
+// SetProfilePicture sets a users profile picture.
+func (u User) SetProfilePicture(ctx context.Context, name string, data []byte) error {
 	// Get file
 	file, err := models.Files.Query(
 		models.SelectWhere.Files.UserID.EQ(u.ID),
@@ -115,35 +108,38 @@ func (u *User) SetProfilePicture(ctx context.Context, name string, data []byte) 
 		// Insert
 		file, err = models.Files.Insert(
 			&models.FileSetter{
-				Name:   &name,
-				Data:   &data,
-				UserID: &u.ID,
+				Name:   omit.From(name),
+				Data:   omit.From(data),
+				UserID: omit.From(u.ID),
 			},
 		).One(ctx, u.db)
 		if err != nil {
 			return err
 		}
 
-		u.ProfilePictureID = sql.Null[int32]{
-			V:     file.ID,
-			Valid: true,
+		// Update user with profile picture ID
+		err = u.Update(ctx, u.db, &models.UserSetter{
+			ProfilePictureID: omitnull.From(file.ID),
+		})
+		if err != nil {
+			return err
 		}
 	} else {
 		// Update
-		err := file.Update(ctx, u.db, &models.FileSetter{
-			Name: &name,
-			Data: &data,
+		err = file.Update(ctx, u.db, &models.FileSetter{
+			Name: omit.From(name),
+			Data: omit.From(data),
 		})
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 
 	return nil
 }
 
-// Update user password
-func (u *User) SetPassword(ctx context.Context, password string) error {
+// SetPassword updates a users password.
+func (u User) SetPassword(ctx context.Context, password string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -151,7 +147,7 @@ func (u *User) SetPassword(ctx context.Context, password string) error {
 
 	// Update user
 	err = u.Update(ctx, u.db, &models.UserSetter{
-		Password: putil.ToPointer(string(hash)),
+		Password: omit.From(string(hash)),
 	})
 	if err != nil {
 		return err

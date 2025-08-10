@@ -66,71 +66,21 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
       - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
 
-      - name: Set env
-        shell: bash
-        run: |
-          REGISTRY=ghcr.io
+      - uses: nicknovitski/nix-develop@9be7cfb4b10451d3390a75dc18ad0465bed4932a # v1.2.1
+        with:
+          arguments: '--accept-flake-config'
 
-          NR=${{ github.repository }}
-          NAMESPACE="${NR%%/*}"
-          REPOSITORY="${NR##*/}"
+      - name: Build & push images
+        run: |
+          nix build .#image --accept-flake-config
 
           TAG=${{ github.ref_name }}
           VERSION=${TAG#v}
 
-          echo "REGISTRY=${REGISTRY}" >> $GITHUB_ENV
-          echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_ENV
-          echo "REPOSITORY=${REPOSITORY}" >> $GITHUB_ENV
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-
-      - uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & load images
-        run: |
-          nix build .#linux-amd64-image --accept-flake-config
-          docker load < result
-
-          nix build .#linux-arm64-image --accept-flake-config
-          docker load < result
-
-          nix build .#linux-arm-image --accept-flake-config
-          docker load < result
-
-      - name: Push images
-        shell: bash
-        run: |
-          docker image tag $REPOSITORY:$VERSION-amd64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
-          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
-
-          docker image tag $REPOSITORY:$VERSION-arm64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
-          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
-
-          docker image tag $REPOSITORY:$VERSION-arm $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
-          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
-
-      - name: Push manifest
-        shell: bash
-        run: |
-          docker manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm
-          docker manifest push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION
-
-          docker manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:latest \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm
+          ./result | gzip --fast | skopeo copy \
+            --dest-creds=${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} \
+            docker-archive:/dev/stdin \
+            docker://ghcr.io/spotdemo4/ts-server:$VERSION
 
   tag:
     needs: check

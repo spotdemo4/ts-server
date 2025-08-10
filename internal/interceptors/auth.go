@@ -5,12 +5,15 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
+
 	"github.com/spotdemo4/ts-server/internal/auth"
 )
 
 type AuthInterceptor struct {
 	auth *auth.Auth
 }
+
+const CookieTokenName = "token"
 
 func NewAuthInterceptor(auth *auth.Auth) *AuthInterceptor {
 	return &AuthInterceptor{
@@ -32,11 +35,10 @@ func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		// Check if the request contains a valid cookie token
 		cookies := getCookies(req.Header().Get("Cookie"))
 		for _, cookie := range cookies {
-			if cookie.Name == "token" {
+			if cookie.Name == CookieTokenName {
 				user, err := i.auth.GetUserFromToken(cookie.Value)
 				if err == nil {
-					ctx := i.auth.NewContext(ctx, user)
-					return next(ctx, req)
+					return next(i.auth.NewContext(ctx, user), req)
 				}
 			}
 		}
@@ -46,8 +48,7 @@ func (i *AuthInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		if authorization != "" && len(authorization) > 7 {
 			user, err := i.auth.GetUserFromToken(authorization[7:])
 			if err == nil {
-				ctx := i.auth.NewContext(ctx, user)
-				return next(ctx, req)
+				return next(i.auth.NewContext(ctx, user), req)
 			}
 		}
 
@@ -73,11 +74,10 @@ func (i *AuthInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 		// Check if the request contains a valid cookie token
 		cookies := getCookies(conn.RequestHeader().Get("Cookie"))
 		for _, cookie := range cookies {
-			if cookie.Name == "token" {
+			if cookie.Name == CookieTokenName {
 				user, err := i.auth.GetUserFromToken(cookie.Value)
 				if err == nil {
-					ctx := i.auth.NewContext(ctx, user)
-					return next(ctx, conn)
+					return next(i.auth.NewContext(ctx, user), conn)
 				}
 			}
 		}
@@ -87,8 +87,7 @@ func (i *AuthInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 		if authorization != "" && len(authorization) > 7 {
 			user, err := i.auth.GetUserFromToken(authorization[7:])
 			if err == nil {
-				ctx := i.auth.NewContext(ctx, user)
-				return next(ctx, conn)
+				return next(i.auth.NewContext(ctx, user), conn)
 			}
 		}
 

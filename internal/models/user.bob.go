@@ -5,10 +5,12 @@ package models
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 
+	"github.com/aarondl/opt/null"
+	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
@@ -25,7 +27,7 @@ type User struct {
 	ID               int32           `db:"id,pk" `
 	Username         string          `db:"username" `
 	Password         string          `db:"password" `
-	ProfilePictureID sql.Null[int32] `db:"profile_picture_id" `
+	ProfilePictureID null.Val[int32] `db:"profile_picture_id" `
 	WebauthnID       string          `db:"webauthn_id" `
 
 	R userR `db:"-" `
@@ -126,53 +128,48 @@ type userErrors struct {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type UserSetter struct {
-	ID               *int32           `db:"id,pk" `
-	Username         *string          `db:"username" `
-	Password         *string          `db:"password" `
-	ProfilePictureID *sql.Null[int32] `db:"profile_picture_id" `
-	WebauthnID       *string          `db:"webauthn_id" `
+	ID               omit.Val[int32]     `db:"id,pk" `
+	Username         omit.Val[string]    `db:"username" `
+	Password         omit.Val[string]    `db:"password" `
+	ProfilePictureID omitnull.Val[int32] `db:"profile_picture_id" `
+	WebauthnID       omit.Val[string]    `db:"webauthn_id" `
 }
 
 func (s UserSetter) SetColumns() []string {
 	vals := make([]string, 0, 5)
-	if s.ID != nil {
+	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
-
-	if s.Username != nil {
+	if s.Username.IsValue() {
 		vals = append(vals, "username")
 	}
-
-	if s.Password != nil {
+	if s.Password.IsValue() {
 		vals = append(vals, "password")
 	}
-
-	if s.ProfilePictureID != nil {
+	if !s.ProfilePictureID.IsUnset() {
 		vals = append(vals, "profile_picture_id")
 	}
-
-	if s.WebauthnID != nil {
+	if s.WebauthnID.IsValue() {
 		vals = append(vals, "webauthn_id")
 	}
-
 	return vals
 }
 
 func (s UserSetter) Overwrite(t *User) {
-	if s.ID != nil {
-		t.ID = *s.ID
+	if s.ID.IsValue() {
+		t.ID = s.ID.MustGet()
 	}
-	if s.Username != nil {
-		t.Username = *s.Username
+	if s.Username.IsValue() {
+		t.Username = s.Username.MustGet()
 	}
-	if s.Password != nil {
-		t.Password = *s.Password
+	if s.Password.IsValue() {
+		t.Password = s.Password.MustGet()
 	}
-	if s.ProfilePictureID != nil {
-		t.ProfilePictureID = *s.ProfilePictureID
+	if !s.ProfilePictureID.IsUnset() {
+		t.ProfilePictureID = s.ProfilePictureID.MustGetNull()
 	}
-	if s.WebauthnID != nil {
-		t.WebauthnID = *s.WebauthnID
+	if s.WebauthnID.IsValue() {
+		t.WebauthnID = s.WebauthnID.MustGet()
 	}
 }
 
@@ -191,24 +188,24 @@ func (s *UserSetter) Apply(q *dialect.InsertQuery) {
 
 	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
 		vals := make([]bob.Expression, 0, 5)
-		if s.ID != nil {
-			vals = append(vals, sqlite.Arg(s.ID))
+		if s.ID.IsValue() {
+			vals = append(vals, sqlite.Arg(s.ID.MustGet()))
 		}
 
-		if s.Username != nil {
-			vals = append(vals, sqlite.Arg(s.Username))
+		if s.Username.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Username.MustGet()))
 		}
 
-		if s.Password != nil {
-			vals = append(vals, sqlite.Arg(s.Password))
+		if s.Password.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Password.MustGet()))
 		}
 
-		if s.ProfilePictureID != nil {
-			vals = append(vals, sqlite.Arg(s.ProfilePictureID))
+		if !s.ProfilePictureID.IsUnset() {
+			vals = append(vals, sqlite.Arg(s.ProfilePictureID.MustGetNull()))
 		}
 
-		if s.WebauthnID != nil {
-			vals = append(vals, sqlite.Arg(s.WebauthnID))
+		if s.WebauthnID.IsValue() {
+			vals = append(vals, sqlite.Arg(s.WebauthnID.MustGet()))
 		}
 
 		if len(vals) == 0 {
@@ -226,35 +223,35 @@ func (s UserSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 func (s UserSetter) Expressions(prefix ...string) []bob.Expression {
 	exprs := make([]bob.Expression, 0, 5)
 
-	if s.ID != nil {
+	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "id")...),
 			sqlite.Arg(s.ID),
 		}})
 	}
 
-	if s.Username != nil {
+	if s.Username.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "username")...),
 			sqlite.Arg(s.Username),
 		}})
 	}
 
-	if s.Password != nil {
+	if s.Password.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "password")...),
 			sqlite.Arg(s.Password),
 		}})
 	}
 
-	if s.ProfilePictureID != nil {
+	if !s.ProfilePictureID.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "profile_picture_id")...),
 			sqlite.Arg(s.ProfilePictureID),
 		}})
 	}
 
-	if s.WebauthnID != nil {
+	if s.WebauthnID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "webauthn_id")...),
 			sqlite.Arg(s.WebauthnID),
@@ -811,11 +808,20 @@ func (os UserSlice) LoadCredentials(ctx context.Context, exec bob.Executor, mods
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		o.R.Credentials = nil
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		for _, rel := range credentials {
+
 			if o.ID != rel.UserID {
 				continue
 			}
@@ -863,11 +869,20 @@ func (os UserSlice) LoadFiles(ctx context.Context, exec bob.Executor, mods ...bo
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		o.R.Files = nil
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		for _, rel := range files {
+
 			if o.ID != rel.UserID {
 				continue
 			}
@@ -915,11 +930,20 @@ func (os UserSlice) LoadItems(ctx context.Context, exec bob.Executor, mods ...bo
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		o.R.Items = nil
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		for _, rel := range items {
+
 			if o.ID != rel.UserID {
 				continue
 			}
@@ -965,8 +989,16 @@ func (os UserSlice) LoadProfilePictureFile(ctx context.Context, exec bob.Executo
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		for _, rel := range files {
-			if o.ProfilePictureID.V != rel.ID {
+			if !o.ProfilePictureID.IsValue() {
+				continue
+			}
+
+			if o.ProfilePictureID.MustGet() != rel.ID {
 				continue
 			}
 
@@ -982,7 +1014,7 @@ func (os UserSlice) LoadProfilePictureFile(ctx context.Context, exec bob.Executo
 
 func insertUserCredentials0(ctx context.Context, exec bob.Executor, credentials1 []*CredentialSetter, user0 *User) (CredentialSlice, error) {
 	for i := range credentials1 {
-		credentials1[i].UserID = &user0.ID
+		credentials1[i].UserID = omit.From(user0.ID)
 	}
 
 	ret, err := Credentials.Insert(bob.ToMods(credentials1...)).All(ctx, exec)
@@ -995,7 +1027,7 @@ func insertUserCredentials0(ctx context.Context, exec bob.Executor, credentials1
 
 func attachUserCredentials0(ctx context.Context, exec bob.Executor, count int, credentials1 CredentialSlice, user0 *User) (CredentialSlice, error) {
 	setter := &CredentialSetter{
-		UserID: &user0.ID,
+		UserID: omit.From(user0.ID),
 	}
 
 	err := credentials1.UpdateAll(ctx, exec, *setter)
@@ -1050,7 +1082,7 @@ func (user0 *User) AttachCredentials(ctx context.Context, exec bob.Executor, rel
 
 func insertUserFiles0(ctx context.Context, exec bob.Executor, files1 []*FileSetter, user0 *User) (FileSlice, error) {
 	for i := range files1 {
-		files1[i].UserID = &user0.ID
+		files1[i].UserID = omit.From(user0.ID)
 	}
 
 	ret, err := Files.Insert(bob.ToMods(files1...)).All(ctx, exec)
@@ -1063,7 +1095,7 @@ func insertUserFiles0(ctx context.Context, exec bob.Executor, files1 []*FileSett
 
 func attachUserFiles0(ctx context.Context, exec bob.Executor, count int, files1 FileSlice, user0 *User) (FileSlice, error) {
 	setter := &FileSetter{
-		UserID: &user0.ID,
+		UserID: omit.From(user0.ID),
 	}
 
 	err := files1.UpdateAll(ctx, exec, *setter)
@@ -1118,7 +1150,7 @@ func (user0 *User) AttachFiles(ctx context.Context, exec bob.Executor, related .
 
 func insertUserItems0(ctx context.Context, exec bob.Executor, items1 []*ItemSetter, user0 *User) (ItemSlice, error) {
 	for i := range items1 {
-		items1[i].UserID = &user0.ID
+		items1[i].UserID = omit.From(user0.ID)
 	}
 
 	ret, err := Items.Insert(bob.ToMods(items1...)).All(ctx, exec)
@@ -1131,7 +1163,7 @@ func insertUserItems0(ctx context.Context, exec bob.Executor, items1 []*ItemSett
 
 func attachUserItems0(ctx context.Context, exec bob.Executor, count int, items1 ItemSlice, user0 *User) (ItemSlice, error) {
 	setter := &ItemSetter{
-		UserID: &user0.ID,
+		UserID: omit.From(user0.ID),
 	}
 
 	err := items1.UpdateAll(ctx, exec, *setter)
@@ -1186,10 +1218,7 @@ func (user0 *User) AttachItems(ctx context.Context, exec bob.Executor, related .
 
 func attachUserProfilePictureFile0(ctx context.Context, exec bob.Executor, count int, user0 *User, file1 *File) (*User, error) {
 	setter := &UserSetter{
-		ProfilePictureID: func() *sql.Null[int32] {
-			v := sql.Null[int32]{V: file1.ID, Valid: true}
-			return &v
-		}(),
+		ProfilePictureID: omitnull.From(file1.ID),
 	}
 
 	err := user0.Update(ctx, exec, setter)

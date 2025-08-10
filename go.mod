@@ -7,6 +7,7 @@ require (
 	connectrpc.com/connect v1.18.1
 	connectrpc.com/cors v0.1.0
 	connectrpc.com/validate v0.3.0
+	github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65
 	github.com/amacneil/dbmate/v2 v2.28.0
 	github.com/go-webauthn/webauthn v0.13.4
 	github.com/golang-jwt/jwt/v5 v5.3.0
@@ -26,8 +27,6 @@ require (
 require (
 	buf.build/go/protovalidate v0.13.1 // indirect
 	cel.dev/expr v0.24.0 // indirect
-	github.com/aarondl/json v0.0.0-20221020222930-8b0db17ef1bf // indirect
-	github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect

@@ -10,8 +10,9 @@ jobs:
     steps:
       - uses: https://github.com/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: https://github.com/DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
+      - uses: https://github.com/spotdemo4/nix-gitea-cache-action@9794e07ec3d1882dca19ed87b9a57c7fe56e2194 # v1.0.14
 
-      - run: nix flake check --accept-flake-config
+      - run: nix flake check -L --accept-flake-config
 
   build:
     needs: check
@@ -19,6 +20,7 @@ jobs:
     steps:
       - uses: https://github.com/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: https://github.com/DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
+      - uses: https://github.com/spotdemo4/nix-gitea-cache-action@9794e07ec3d1882dca19ed87b9a57c7fe56e2194 # v1.0.14
 
       - run: |
           mkdir binaries
@@ -54,81 +56,23 @@ jobs:
     steps:
       - uses: https://github.com/actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: https://github.com/DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
-
-      - run: >
-          nix build
-          .#linux-amd64-image
-          .#linux-arm64-image
-          .#linux-arm-image
-          --accept-flake-config
+      - uses: https://github.com/spotdemo4/nix-gitea-cache-action@9794e07ec3d1882dca19ed87b9a57c7fe56e2194 # v1.0.14
 
       - uses: https://github.com/nicknovitski/nix-develop@9be7cfb4b10451d3390a75dc18ad0465bed4932a # v1.2.1
         with:
           arguments: '--accept-flake-config'
 
-      - name: Set ENV
-        shell: bash
+      - name: Build & push images
         run: |
-          REGISTRY=$(basename ${{ github.server_url }})
-          REGISTRY=${REGISTRY,,}
-
-          NR=${{ github.repository }}
-          NAMESPACE="${NR%%/*}"
-          REPOSITORY="${NR##*/}"
+          nix build .#image --accept-flake-config
 
           TAG=${{ github.ref_name }}
           VERSION=${TAG#v}
 
-          echo "REGISTRY=${REGISTRY}" >> $GITHUB_ENV
-          echo "NAMESPACE=${NAMESPACE}" >> $GITHUB_ENV
-          echo "REPOSITORY=${REPOSITORY}" >> $GITHUB_ENV
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-
-      - name: Login
-        run: |
-          mkdir -p /etc/containers
-          curl -L -o /etc/containers/registries.conf https://raw.githubusercontent.com/containers/image/main/registries.conf
-          curl -L -o /etc/containers/policy.json https://raw.githubusercontent.com/containers/image/main/default-policy.json
-
-          docker login ${{ github.server_url }} -u ${{ github.actor }} -p ${{ secrets.USER_TOKEN }}
-
-      - name: Load images
-        run: |
-          docker load < result
-          docker load < result-1
-          docker load < result-2
-
-      - name: Push images
-        shell: bash
-        run: |
-          docker image tag $REPOSITORY:$VERSION-amd64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
-          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64
-
-          docker image tag $REPOSITORY:$VERSION-arm64 $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
-          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64
-
-          docker image tag $REPOSITORY:$VERSION-arm $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
-          docker push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
-
-      - name: Push manifest
-        shell: bash
-        run: |
-          docker manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm
-          docker manifest push $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION
-
-          docker manifest create $REGISTRY/$NAMESPACE/$REPOSITORY:latest \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 \
-            $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-amd64 --arch amd64
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm64 --arch arm64
-          docker manifest annotate $REGISTRY/$NAMESPACE/$REPOSITORY:latest $REGISTRY/$NAMESPACE/$REPOSITORY:$VERSION-arm --arch arm
+          ./result | gzip --fast | skopeo copy \
+            --dest-creds=${{ github.actor }}:${{ secrets.GITHUB_TOKEN }} \
+            docker-archive:/dev/stdin \
+            docker://gitea.com/spotdemo4/ts-server:$VERSION
 
   tag:
     needs: check

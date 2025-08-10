@@ -7,6 +7,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/aarondl/opt/omit"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
@@ -88,21 +89,20 @@ type schemaMigrationErrors struct {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type SchemaMigrationSetter struct {
-	Version *string `db:"version,pk" `
+	Version omit.Val[string] `db:"version,pk" `
 }
 
 func (s SchemaMigrationSetter) SetColumns() []string {
 	vals := make([]string, 0, 1)
-	if s.Version != nil {
+	if s.Version.IsValue() {
 		vals = append(vals, "version")
 	}
-
 	return vals
 }
 
 func (s SchemaMigrationSetter) Overwrite(t *SchemaMigration) {
-	if s.Version != nil {
-		t.Version = *s.Version
+	if s.Version.IsValue() {
+		t.Version = s.Version.MustGet()
 	}
 }
 
@@ -121,8 +121,8 @@ func (s *SchemaMigrationSetter) Apply(q *dialect.InsertQuery) {
 
 	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
 		vals := make([]bob.Expression, 0, 1)
-		if s.Version != nil {
-			vals = append(vals, sqlite.Arg(s.Version))
+		if s.Version.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Version.MustGet()))
 		}
 
 		if len(vals) == 0 {
@@ -140,7 +140,7 @@ func (s SchemaMigrationSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 func (s SchemaMigrationSetter) Expressions(prefix ...string) []bob.Expression {
 	exprs := make([]bob.Expression, 0, 1)
 
-	if s.Version != nil {
+	if s.Version.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "version")...),
 			sqlite.Arg(s.Version),

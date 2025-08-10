@@ -5,10 +5,12 @@ package factory
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 	"time"
 
+	"github.com/aarondl/opt/null"
+	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/jaswdr/faker/v2"
 	models "github.com/spotdemo4/ts-server/internal/models"
 	"github.com/stephenafamo/bob"
@@ -38,18 +40,20 @@ type CredentialTemplate struct {
 	CredID                func() string
 	CredPublicKey         func() []byte
 	SignCount             func() int32
-	Transports            func() sql.Null[string]
-	UserVerified          func() sql.Null[bool]
-	BackupEligible        func() sql.Null[bool]
-	BackupState           func() sql.Null[bool]
-	AttestationObject     func() sql.Null[[]byte]
-	AttestationClientData func() sql.Null[[]byte]
+	Transports            func() null.Val[string]
+	UserVerified          func() null.Val[bool]
+	BackupEligible        func() null.Val[bool]
+	BackupState           func() null.Val[bool]
+	AttestationObject     func() null.Val[[]byte]
+	AttestationClientData func() null.Val[[]byte]
 	CreatedAt             func() time.Time
 	LastUsed              func() time.Time
 	UserID                func() int32
 
 	r credentialR
 	f *Factory
+
+	alreadyPersisted bool
 }
 
 type credentialR struct {
@@ -85,51 +89,51 @@ func (o CredentialTemplate) BuildSetter() *models.CredentialSetter {
 
 	if o.CredID != nil {
 		val := o.CredID()
-		m.CredID = &val
+		m.CredID = omit.From(val)
 	}
 	if o.CredPublicKey != nil {
 		val := o.CredPublicKey()
-		m.CredPublicKey = &val
+		m.CredPublicKey = omit.From(val)
 	}
 	if o.SignCount != nil {
 		val := o.SignCount()
-		m.SignCount = &val
+		m.SignCount = omit.From(val)
 	}
 	if o.Transports != nil {
 		val := o.Transports()
-		m.Transports = &val
+		m.Transports = omitnull.FromNull(val)
 	}
 	if o.UserVerified != nil {
 		val := o.UserVerified()
-		m.UserVerified = &val
+		m.UserVerified = omitnull.FromNull(val)
 	}
 	if o.BackupEligible != nil {
 		val := o.BackupEligible()
-		m.BackupEligible = &val
+		m.BackupEligible = omitnull.FromNull(val)
 	}
 	if o.BackupState != nil {
 		val := o.BackupState()
-		m.BackupState = &val
+		m.BackupState = omitnull.FromNull(val)
 	}
 	if o.AttestationObject != nil {
 		val := o.AttestationObject()
-		m.AttestationObject = &val
+		m.AttestationObject = omitnull.FromNull(val)
 	}
 	if o.AttestationClientData != nil {
 		val := o.AttestationClientData()
-		m.AttestationClientData = &val
+		m.AttestationClientData = omitnull.FromNull(val)
 	}
 	if o.CreatedAt != nil {
 		val := o.CreatedAt()
-		m.CreatedAt = &val
+		m.CreatedAt = omit.From(val)
 	}
 	if o.LastUsed != nil {
 		val := o.LastUsed()
-		m.LastUsed = &val
+		m.LastUsed = omit.From(val)
 	}
 	if o.UserID != nil {
 		val := o.UserID()
-		m.UserID = &val
+		m.UserID = omit.From(val)
 	}
 
 	return m
@@ -209,45 +213,75 @@ func (o CredentialTemplate) BuildMany(number int) models.CredentialSlice {
 }
 
 func ensureCreatableCredential(m *models.CredentialSetter) {
-	if m.CredID == nil {
+	if !(m.CredID.IsValue()) {
 		val := random_string(nil)
-		m.CredID = &val
+		m.CredID = omit.From(val)
 	}
-	if m.CredPublicKey == nil {
+	if !(m.CredPublicKey.IsValue()) {
 		val := random___byte(nil)
-		m.CredPublicKey = &val
+		m.CredPublicKey = omit.From(val)
 	}
-	if m.SignCount == nil {
+	if !(m.SignCount.IsValue()) {
 		val := random_int32(nil)
-		m.SignCount = &val
+		m.SignCount = omit.From(val)
 	}
-	if m.CreatedAt == nil {
+	if !(m.CreatedAt.IsValue()) {
 		val := random_time_Time(nil)
-		m.CreatedAt = &val
+		m.CreatedAt = omit.From(val)
 	}
-	if m.LastUsed == nil {
+	if !(m.LastUsed.IsValue()) {
 		val := random_time_Time(nil)
-		m.LastUsed = &val
+		m.LastUsed = omit.From(val)
 	}
-	if m.UserID == nil {
+	if !(m.UserID.IsValue()) {
 		val := random_int32(nil)
-		m.UserID = &val
+		m.UserID = omit.From(val)
 	}
 }
 
 // insertOptRels creates and inserts any optional the relationships on *models.Credential
 // according to the relationships in the template.
 // any required relationship should have already exist on the model
-func (o *CredentialTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.Credential) (context.Context, error) {
+func (o *CredentialTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.Credential) error {
 	var err error
 
-	return ctx, err
+	return err
 }
 
 // Create builds a credential and inserts it into the database
 // Relations objects are also inserted and placed in the .R field
 func (o *CredentialTemplate) Create(ctx context.Context, exec bob.Executor) (*models.Credential, error) {
-	_, m, err := o.create(ctx, exec)
+	var err error
+	opt := o.BuildSetter()
+	ensureCreatableCredential(opt)
+
+	if o.r.User == nil {
+		CredentialMods.WithNewUser().Apply(ctx, o)
+	}
+
+	var rel0 *models.User
+
+	if o.r.User.o.alreadyPersisted {
+		rel0 = o.r.User.o.Build()
+	} else {
+		rel0, err = o.r.User.o.Create(ctx, exec)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	opt.UserID = omit.From(rel0.ID)
+
+	m, err := models.Credentials.Insert(opt).One(ctx, exec)
+	if err != nil {
+		return nil, err
+	}
+
+	m.R.User = rel0
+
+	if err := o.insertOptRels(ctx, exec, m); err != nil {
+		return nil, err
+	}
 	return m, err
 }
 
@@ -255,7 +289,7 @@ func (o *CredentialTemplate) Create(ctx context.Context, exec bob.Executor) (*mo
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o *CredentialTemplate) MustCreate(ctx context.Context, exec bob.Executor) *models.Credential {
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		panic(err)
 	}
@@ -267,7 +301,7 @@ func (o *CredentialTemplate) MustCreate(ctx context.Context, exec bob.Executor) 
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o *CredentialTemplate) CreateOrFail(ctx context.Context, tb testing.TB, exec bob.Executor) *models.Credential {
 	tb.Helper()
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
@@ -275,52 +309,27 @@ func (o *CredentialTemplate) CreateOrFail(ctx context.Context, tb testing.TB, ex
 	return m
 }
 
-// create builds a credential and inserts it into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted model
-func (o *CredentialTemplate) create(ctx context.Context, exec bob.Executor) (context.Context, *models.Credential, error) {
-	var err error
-	opt := o.BuildSetter()
-	ensureCreatableCredential(opt)
-
-	if o.r.User == nil {
-		CredentialMods.WithNewUser().Apply(ctx, o)
-	}
-
-	rel0, ok := userCtx.Value(ctx)
-	if !ok {
-		ctx, rel0, err = o.r.User.o.create(ctx, exec)
-		if err != nil {
-			return ctx, nil, err
-		}
-	}
-
-	opt.UserID = &rel0.ID
-
-	m, err := models.Credentials.Insert(opt).One(ctx, exec)
-	if err != nil {
-		return ctx, nil, err
-	}
-	ctx = credentialCtx.WithValue(ctx, m)
-
-	m.R.User = rel0
-
-	ctx, err = o.insertOptRels(ctx, exec, m)
-	return ctx, m, err
-}
-
 // CreateMany builds multiple credentials and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 func (o CredentialTemplate) CreateMany(ctx context.Context, exec bob.Executor, number int) (models.CredentialSlice, error) {
-	_, m, err := o.createMany(ctx, exec, number)
-	return m, err
+	var err error
+	m := make(models.CredentialSlice, number)
+
+	for i := range m {
+		m[i], err = o.Create(ctx, exec)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return m, nil
 }
 
 // MustCreateMany builds multiple credentials and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o CredentialTemplate) MustCreateMany(ctx context.Context, exec bob.Executor, number int) models.CredentialSlice {
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		panic(err)
 	}
@@ -332,29 +341,12 @@ func (o CredentialTemplate) MustCreateMany(ctx context.Context, exec bob.Executo
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o CredentialTemplate) CreateManyOrFail(ctx context.Context, tb testing.TB, exec bob.Executor, number int) models.CredentialSlice {
 	tb.Helper()
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
 	}
 	return m
-}
-
-// createMany builds multiple credentials and inserts them into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted models
-func (o CredentialTemplate) createMany(ctx context.Context, exec bob.Executor, number int) (context.Context, models.CredentialSlice, error) {
-	var err error
-	m := make(models.CredentialSlice, number)
-
-	for i := range m {
-		ctx, m[i], err = o.create(ctx, exec)
-		if err != nil {
-			return ctx, nil, err
-		}
-	}
-
-	return ctx, m, nil
 }
 
 // Credential has methods that act as mods for the CredentialTemplate
@@ -473,14 +465,14 @@ func (m credentialMods) RandomSignCount(f *faker.Faker) CredentialMod {
 }
 
 // Set the model columns to this value
-func (m credentialMods) Transports(val sql.Null[string]) CredentialMod {
+func (m credentialMods) Transports(val null.Val[string]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.Transports = func() sql.Null[string] { return val }
+		o.Transports = func() null.Val[string] { return val }
 	})
 }
 
 // Set the Column from the function
-func (m credentialMods) TransportsFunc(f func() sql.Null[string]) CredentialMod {
+func (m credentialMods) TransportsFunc(f func() null.Val[string]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
 		o.Transports = f
 	})
@@ -498,13 +490,13 @@ func (m credentialMods) UnsetTransports() CredentialMod {
 // The generated value is sometimes null
 func (m credentialMods) RandomTransports(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.Transports = func() sql.Null[string] {
+		o.Transports = func() null.Val[string] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_string(f)
-			return sql.Null[string]{V: val, Valid: f.Bool()}
+			return null.From(val)
 		}
 	})
 }
@@ -514,26 +506,26 @@ func (m credentialMods) RandomTransports(f *faker.Faker) CredentialMod {
 // The generated value is never null
 func (m credentialMods) RandomTransportsNotNull(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.Transports = func() sql.Null[string] {
+		o.Transports = func() null.Val[string] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_string(f)
-			return sql.Null[string]{V: val, Valid: true}
+			return null.From(val)
 		}
 	})
 }
 
 // Set the model columns to this value
-func (m credentialMods) UserVerified(val sql.Null[bool]) CredentialMod {
+func (m credentialMods) UserVerified(val null.Val[bool]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.UserVerified = func() sql.Null[bool] { return val }
+		o.UserVerified = func() null.Val[bool] { return val }
 	})
 }
 
 // Set the Column from the function
-func (m credentialMods) UserVerifiedFunc(f func() sql.Null[bool]) CredentialMod {
+func (m credentialMods) UserVerifiedFunc(f func() null.Val[bool]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
 		o.UserVerified = f
 	})
@@ -551,13 +543,13 @@ func (m credentialMods) UnsetUserVerified() CredentialMod {
 // The generated value is sometimes null
 func (m credentialMods) RandomUserVerified(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.UserVerified = func() sql.Null[bool] {
+		o.UserVerified = func() null.Val[bool] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_bool(f)
-			return sql.Null[bool]{V: val, Valid: f.Bool()}
+			return null.From(val)
 		}
 	})
 }
@@ -567,26 +559,26 @@ func (m credentialMods) RandomUserVerified(f *faker.Faker) CredentialMod {
 // The generated value is never null
 func (m credentialMods) RandomUserVerifiedNotNull(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.UserVerified = func() sql.Null[bool] {
+		o.UserVerified = func() null.Val[bool] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_bool(f)
-			return sql.Null[bool]{V: val, Valid: true}
+			return null.From(val)
 		}
 	})
 }
 
 // Set the model columns to this value
-func (m credentialMods) BackupEligible(val sql.Null[bool]) CredentialMod {
+func (m credentialMods) BackupEligible(val null.Val[bool]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.BackupEligible = func() sql.Null[bool] { return val }
+		o.BackupEligible = func() null.Val[bool] { return val }
 	})
 }
 
 // Set the Column from the function
-func (m credentialMods) BackupEligibleFunc(f func() sql.Null[bool]) CredentialMod {
+func (m credentialMods) BackupEligibleFunc(f func() null.Val[bool]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
 		o.BackupEligible = f
 	})
@@ -604,13 +596,13 @@ func (m credentialMods) UnsetBackupEligible() CredentialMod {
 // The generated value is sometimes null
 func (m credentialMods) RandomBackupEligible(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.BackupEligible = func() sql.Null[bool] {
+		o.BackupEligible = func() null.Val[bool] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_bool(f)
-			return sql.Null[bool]{V: val, Valid: f.Bool()}
+			return null.From(val)
 		}
 	})
 }
@@ -620,26 +612,26 @@ func (m credentialMods) RandomBackupEligible(f *faker.Faker) CredentialMod {
 // The generated value is never null
 func (m credentialMods) RandomBackupEligibleNotNull(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.BackupEligible = func() sql.Null[bool] {
+		o.BackupEligible = func() null.Val[bool] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_bool(f)
-			return sql.Null[bool]{V: val, Valid: true}
+			return null.From(val)
 		}
 	})
 }
 
 // Set the model columns to this value
-func (m credentialMods) BackupState(val sql.Null[bool]) CredentialMod {
+func (m credentialMods) BackupState(val null.Val[bool]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.BackupState = func() sql.Null[bool] { return val }
+		o.BackupState = func() null.Val[bool] { return val }
 	})
 }
 
 // Set the Column from the function
-func (m credentialMods) BackupStateFunc(f func() sql.Null[bool]) CredentialMod {
+func (m credentialMods) BackupStateFunc(f func() null.Val[bool]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
 		o.BackupState = f
 	})
@@ -657,13 +649,13 @@ func (m credentialMods) UnsetBackupState() CredentialMod {
 // The generated value is sometimes null
 func (m credentialMods) RandomBackupState(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.BackupState = func() sql.Null[bool] {
+		o.BackupState = func() null.Val[bool] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_bool(f)
-			return sql.Null[bool]{V: val, Valid: f.Bool()}
+			return null.From(val)
 		}
 	})
 }
@@ -673,26 +665,26 @@ func (m credentialMods) RandomBackupState(f *faker.Faker) CredentialMod {
 // The generated value is never null
 func (m credentialMods) RandomBackupStateNotNull(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.BackupState = func() sql.Null[bool] {
+		o.BackupState = func() null.Val[bool] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random_bool(f)
-			return sql.Null[bool]{V: val, Valid: true}
+			return null.From(val)
 		}
 	})
 }
 
 // Set the model columns to this value
-func (m credentialMods) AttestationObject(val sql.Null[[]byte]) CredentialMod {
+func (m credentialMods) AttestationObject(val null.Val[[]byte]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.AttestationObject = func() sql.Null[[]byte] { return val }
+		o.AttestationObject = func() null.Val[[]byte] { return val }
 	})
 }
 
 // Set the Column from the function
-func (m credentialMods) AttestationObjectFunc(f func() sql.Null[[]byte]) CredentialMod {
+func (m credentialMods) AttestationObjectFunc(f func() null.Val[[]byte]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
 		o.AttestationObject = f
 	})
@@ -710,13 +702,13 @@ func (m credentialMods) UnsetAttestationObject() CredentialMod {
 // The generated value is sometimes null
 func (m credentialMods) RandomAttestationObject(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.AttestationObject = func() sql.Null[[]byte] {
+		o.AttestationObject = func() null.Val[[]byte] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random___byte(f)
-			return sql.Null[[]byte]{V: val, Valid: f.Bool()}
+			return null.From(val)
 		}
 	})
 }
@@ -726,26 +718,26 @@ func (m credentialMods) RandomAttestationObject(f *faker.Faker) CredentialMod {
 // The generated value is never null
 func (m credentialMods) RandomAttestationObjectNotNull(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.AttestationObject = func() sql.Null[[]byte] {
+		o.AttestationObject = func() null.Val[[]byte] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random___byte(f)
-			return sql.Null[[]byte]{V: val, Valid: true}
+			return null.From(val)
 		}
 	})
 }
 
 // Set the model columns to this value
-func (m credentialMods) AttestationClientData(val sql.Null[[]byte]) CredentialMod {
+func (m credentialMods) AttestationClientData(val null.Val[[]byte]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.AttestationClientData = func() sql.Null[[]byte] { return val }
+		o.AttestationClientData = func() null.Val[[]byte] { return val }
 	})
 }
 
 // Set the Column from the function
-func (m credentialMods) AttestationClientDataFunc(f func() sql.Null[[]byte]) CredentialMod {
+func (m credentialMods) AttestationClientDataFunc(f func() null.Val[[]byte]) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
 		o.AttestationClientData = f
 	})
@@ -763,13 +755,13 @@ func (m credentialMods) UnsetAttestationClientData() CredentialMod {
 // The generated value is sometimes null
 func (m credentialMods) RandomAttestationClientData(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.AttestationClientData = func() sql.Null[[]byte] {
+		o.AttestationClientData = func() null.Val[[]byte] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random___byte(f)
-			return sql.Null[[]byte]{V: val, Valid: f.Bool()}
+			return null.From(val)
 		}
 	})
 }
@@ -779,13 +771,13 @@ func (m credentialMods) RandomAttestationClientData(f *faker.Faker) CredentialMo
 // The generated value is never null
 func (m credentialMods) RandomAttestationClientDataNotNull(f *faker.Faker) CredentialMod {
 	return CredentialModFunc(func(_ context.Context, o *CredentialTemplate) {
-		o.AttestationClientData = func() sql.Null[[]byte] {
+		o.AttestationClientData = func() null.Val[[]byte] {
 			if f == nil {
 				f = &defaultFaker
 			}
 
 			val := random___byte(f)
-			return sql.Null[[]byte]{V: val, Valid: true}
+			return null.From(val)
 		}
 	})
 }
@@ -891,7 +883,7 @@ func (m credentialMods) WithParentsCascading() CredentialMod {
 		ctx = credentialWithParentsCascadingCtx.WithValue(ctx, true)
 		{
 
-			related := o.f.NewUser(ctx, UserMods.WithParentsCascading())
+			related := o.f.NewUserWithContext(ctx, UserMods.WithParentsCascading())
 			m.WithUser(related).Apply(ctx, o)
 		}
 	})
@@ -907,9 +899,17 @@ func (m credentialMods) WithUser(rel *UserTemplate) CredentialMod {
 
 func (m credentialMods) WithNewUser(mods ...UserMod) CredentialMod {
 	return CredentialModFunc(func(ctx context.Context, o *CredentialTemplate) {
-		related := o.f.NewUser(ctx, mods...)
+		related := o.f.NewUserWithContext(ctx, mods...)
 
 		m.WithUser(related).Apply(ctx, o)
+	})
+}
+
+func (m credentialMods) WithExistingUser(em *models.User) CredentialMod {
+	return CredentialModFunc(func(ctx context.Context, o *CredentialTemplate) {
+		o.r.User = &credentialRUserR{
+			o: o.f.FromExistingUser(em),
+		}
 	})
 }
 

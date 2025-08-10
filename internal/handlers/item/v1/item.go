@@ -6,42 +6,36 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/aarondl/opt/omit"
+	"github.com/stephenafamo/bob"
+	"github.com/stephenafamo/bob/dialect/sqlite/sm"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/spotdemo4/ts-server/internal/app"
 	"github.com/spotdemo4/ts-server/internal/auth"
 	itemv1 "github.com/spotdemo4/ts-server/internal/connect/item/v1"
 	"github.com/spotdemo4/ts-server/internal/connect/item/v1/itemv1connect"
 	"github.com/spotdemo4/ts-server/internal/models"
 	"github.com/spotdemo4/ts-server/internal/putil"
-	"github.com/stephenafamo/bob"
-	"github.com/stephenafamo/bob/dialect/sqlite/sm"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-func itemToConnect(item models.Item) *itemv1.Item {
-	timestamp := timestamppb.New(item.Added)
-
-	return &itemv1.Item{
-		Id:          item.ID,
-		Name:        item.Name,
-		Description: item.Description,
-		Price:       float32(item.Price),
-		Quantity:    int32(item.Quantity),
-		Added:       timestamp,
-	}
-}
 
 type Handler struct {
 	db   *bob.DB
 	auth *auth.Auth
 }
 
-func (h *Handler) GetItem(ctx context.Context, req *connect.Request[itemv1.GetItemRequest]) (*connect.Response[itemv1.GetItemResponse], error) {
+// GetItem retrieves an item by its ID.
+func (h *Handler) GetItem(
+	ctx context.Context,
+	req *connect.Request[itemv1.GetItemRequest],
+) (*connect.Response[itemv1.GetItemResponse], error) {
 	user, ok := h.auth.GetContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
 
 	item, err := models.Items.Query(
-		models.SelectWhere.Items.ID.EQ(int32(req.Msg.Id)),
+		models.SelectWhere.Items.ID.EQ(req.Msg.GetId()),
 		models.SelectWhere.Items.UserID.EQ(user.ID),
 	).One(ctx, h.db)
 	if err != nil {
@@ -54,7 +48,13 @@ func (h *Handler) GetItem(ctx context.Context, req *connect.Request[itemv1.GetIt
 	return res, nil
 }
 
-func (h *Handler) GetItems(ctx context.Context, req *connect.Request[itemv1.GetItemsRequest]) (*connect.Response[itemv1.GetItemsResponse], error) {
+const DefaultLimit = 10
+
+// GetItems retrieves a list of items for a user.
+func (h *Handler) GetItems(
+	ctx context.Context,
+	req *connect.Request[itemv1.GetItemsRequest],
+) (*connect.Response[itemv1.GetItemsResponse], error) {
 	user, ok := h.auth.GetContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
@@ -67,21 +67,21 @@ func (h *Handler) GetItems(ctx context.Context, req *connect.Request[itemv1.GetI
 	// Filter
 	if req.Msg.Filter != nil {
 		query.Apply(
-			models.SelectWhere.Items.Name.Like(*req.Msg.Filter),
+			models.SelectWhere.Items.Name.Like(req.Msg.GetFilter()),
 		)
 	}
 
 	// Start
-	if req.Msg.Start != nil {
+	if req.Msg.GetStart() != nil {
 		query.Apply(
-			models.SelectWhere.Items.Added.GTE(req.Msg.Start.AsTime()),
+			models.SelectWhere.Items.Added.GTE(req.Msg.GetStart().AsTime()),
 		)
 	}
 
 	// End
-	if req.Msg.End != nil {
+	if req.Msg.GetEnd() != nil {
 		query.Apply(
-			models.SelectWhere.Items.Added.LTE(req.Msg.End.AsTime()),
+			models.SelectWhere.Items.Added.LTE(req.Msg.GetEnd().AsTime()),
 		)
 	}
 
@@ -93,14 +93,14 @@ func (h *Handler) GetItems(ctx context.Context, req *connect.Request[itemv1.GetI
 
 	// Limit
 	if req.Msg.Limit != nil {
-		query.Apply(sm.Limit(*req.Msg.Limit))
+		query.Apply(sm.Limit(req.Msg.GetLimit()))
 	} else {
-		query.Apply(sm.Limit(10))
+		query.Apply(sm.Limit(DefaultLimit))
 	}
 
 	// Offset
 	if req.Msg.Offset != nil {
-		query.Apply(sm.Offset(*req.Msg.Offset))
+		query.Apply(sm.Offset(req.Msg.GetOffset()))
 	} else {
 		query.Apply(sm.Offset(0))
 	}
@@ -126,7 +126,11 @@ func (h *Handler) GetItems(ctx context.Context, req *connect.Request[itemv1.GetI
 	return res, nil
 }
 
-func (h *Handler) CreateItem(ctx context.Context, req *connect.Request[itemv1.CreateItemRequest]) (*connect.Response[itemv1.CreateItemResponse], error) {
+// CreateItem creates a new item for a user.
+func (h *Handler) CreateItem(
+	ctx context.Context,
+	req *connect.Request[itemv1.CreateItemRequest],
+) (*connect.Response[itemv1.CreateItemResponse], error) {
 	user, ok := h.auth.GetContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
@@ -134,12 +138,12 @@ func (h *Handler) CreateItem(ctx context.Context, req *connect.Request[itemv1.Cr
 
 	item, err := models.Items.Insert(
 		&models.ItemSetter{
-			Name:        &req.Msg.Name,
-			Added:       putil.ToPointer(time.Now()),
-			Description: &req.Msg.Description,
-			Price:       &req.Msg.Price,
-			Quantity:    &req.Msg.Quantity,
-			UserID:      &user.ID,
+			Name:        omit.From(req.Msg.GetName()),
+			Added:       omit.From(time.Now()),
+			Description: omit.From(req.Msg.GetDescription()),
+			Price:       omit.From(req.Msg.GetPrice()),
+			Quantity:    omit.From(req.Msg.GetQuantity()),
+			UserID:      omit.From(user.ID),
 		},
 	).One(ctx, h.db)
 	if err != nil {
@@ -153,7 +157,11 @@ func (h *Handler) CreateItem(ctx context.Context, req *connect.Request[itemv1.Cr
 	return res, nil
 }
 
-func (h *Handler) UpdateItem(ctx context.Context, req *connect.Request[itemv1.UpdateItemRequest]) (*connect.Response[itemv1.UpdateItemResponse], error) {
+// UpdateItem updates an existing item.
+func (h *Handler) UpdateItem(
+	ctx context.Context,
+	req *connect.Request[itemv1.UpdateItemRequest],
+) (*connect.Response[itemv1.UpdateItemResponse], error) {
 	user, ok := h.auth.GetContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
@@ -161,7 +169,7 @@ func (h *Handler) UpdateItem(ctx context.Context, req *connect.Request[itemv1.Up
 
 	// Get item
 	item, err := models.Items.Query(
-		models.SelectWhere.Items.ID.EQ(req.Msg.Id),
+		models.SelectWhere.Items.ID.EQ(req.Msg.GetId()),
 		models.SelectWhere.Items.UserID.EQ(user.ID),
 	).One(ctx, h.db)
 	if err != nil {
@@ -170,10 +178,10 @@ func (h *Handler) UpdateItem(ctx context.Context, req *connect.Request[itemv1.Up
 
 	// Update item
 	err = item.Update(ctx, h.db, &models.ItemSetter{
-		Name:        req.Msg.Name,
-		Description: req.Msg.Description,
-		Price:       req.Msg.Price,
-		Quantity:    req.Msg.Quantity,
+		Name:        omit.From(req.Msg.GetName()),
+		Description: omit.From(req.Msg.GetDescription()),
+		Price:       omit.From(req.Msg.GetPrice()),
+		Quantity:    omit.From(req.Msg.GetQuantity()),
 	})
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
@@ -183,7 +191,11 @@ func (h *Handler) UpdateItem(ctx context.Context, req *connect.Request[itemv1.Up
 	return res, nil
 }
 
-func (h *Handler) DeleteItem(ctx context.Context, req *connect.Request[itemv1.DeleteItemRequest]) (*connect.Response[itemv1.DeleteItemResponse], error) {
+// DeleteItem deletes a user's item.
+func (h *Handler) DeleteItem(
+	ctx context.Context,
+	req *connect.Request[itemv1.DeleteItemRequest],
+) (*connect.Response[itemv1.DeleteItemResponse], error) {
 	user, ok := h.auth.GetContext(ctx)
 	if !ok {
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
@@ -191,7 +203,7 @@ func (h *Handler) DeleteItem(ctx context.Context, req *connect.Request[itemv1.De
 
 	// Get item
 	item, err := models.Items.Query(
-		models.SelectWhere.Items.ID.EQ(req.Msg.Id),
+		models.SelectWhere.Items.ID.EQ(req.Msg.GetId()),
 		models.SelectWhere.Items.UserID.EQ(user.ID),
 	).One(ctx, h.db)
 	if err != nil {
@@ -208,11 +220,12 @@ func (h *Handler) DeleteItem(ctx context.Context, req *connect.Request[itemv1.De
 	return res, nil
 }
 
-func NewHandler(db *bob.DB, auth *auth.Auth, interceptors connect.Option) (string, http.Handler) {
+// New creates a new Item service handler.
+func New(app *app.App, interceptors connect.Option) (string, http.Handler) {
 	return itemv1connect.NewItemServiceHandler(
 		&Handler{
-			db:   db,
-			auth: auth,
+			db:   app.DB,
+			auth: app.Auth,
 		},
 		interceptors,
 	)

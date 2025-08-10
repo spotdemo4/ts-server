@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aarondl/opt/omit"
 	"github.com/jaswdr/faker/v2"
 	models "github.com/spotdemo4/ts-server/internal/models"
 	"github.com/stephenafamo/bob"
@@ -44,6 +45,8 @@ type ItemTemplate struct {
 
 	r itemR
 	f *Factory
+
+	alreadyPersisted bool
 }
 
 type itemR struct {
@@ -79,31 +82,31 @@ func (o ItemTemplate) BuildSetter() *models.ItemSetter {
 
 	if o.ID != nil {
 		val := o.ID()
-		m.ID = &val
+		m.ID = omit.From(val)
 	}
 	if o.Name != nil {
 		val := o.Name()
-		m.Name = &val
+		m.Name = omit.From(val)
 	}
 	if o.Added != nil {
 		val := o.Added()
-		m.Added = &val
+		m.Added = omit.From(val)
 	}
 	if o.Description != nil {
 		val := o.Description()
-		m.Description = &val
+		m.Description = omit.From(val)
 	}
 	if o.Price != nil {
 		val := o.Price()
-		m.Price = &val
+		m.Price = omit.From(val)
 	}
 	if o.Quantity != nil {
 		val := o.Quantity()
-		m.Quantity = &val
+		m.Quantity = omit.From(val)
 	}
 	if o.UserID != nil {
 		val := o.UserID()
-		m.UserID = &val
+		m.UserID = omit.From(val)
 	}
 
 	return m
@@ -168,45 +171,75 @@ func (o ItemTemplate) BuildMany(number int) models.ItemSlice {
 }
 
 func ensureCreatableItem(m *models.ItemSetter) {
-	if m.Name == nil {
+	if !(m.Name.IsValue()) {
 		val := random_string(nil)
-		m.Name = &val
+		m.Name = omit.From(val)
 	}
-	if m.Added == nil {
+	if !(m.Added.IsValue()) {
 		val := random_time_Time(nil)
-		m.Added = &val
+		m.Added = omit.From(val)
 	}
-	if m.Description == nil {
+	if !(m.Description.IsValue()) {
 		val := random_string(nil)
-		m.Description = &val
+		m.Description = omit.From(val)
 	}
-	if m.Price == nil {
+	if !(m.Price.IsValue()) {
 		val := random_float32(nil)
-		m.Price = &val
+		m.Price = omit.From(val)
 	}
-	if m.Quantity == nil {
+	if !(m.Quantity.IsValue()) {
 		val := random_int32(nil)
-		m.Quantity = &val
+		m.Quantity = omit.From(val)
 	}
-	if m.UserID == nil {
+	if !(m.UserID.IsValue()) {
 		val := random_int32(nil)
-		m.UserID = &val
+		m.UserID = omit.From(val)
 	}
 }
 
 // insertOptRels creates and inserts any optional the relationships on *models.Item
 // according to the relationships in the template.
 // any required relationship should have already exist on the model
-func (o *ItemTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.Item) (context.Context, error) {
+func (o *ItemTemplate) insertOptRels(ctx context.Context, exec bob.Executor, m *models.Item) error {
 	var err error
 
-	return ctx, err
+	return err
 }
 
 // Create builds a item and inserts it into the database
 // Relations objects are also inserted and placed in the .R field
 func (o *ItemTemplate) Create(ctx context.Context, exec bob.Executor) (*models.Item, error) {
-	_, m, err := o.create(ctx, exec)
+	var err error
+	opt := o.BuildSetter()
+	ensureCreatableItem(opt)
+
+	if o.r.User == nil {
+		ItemMods.WithNewUser().Apply(ctx, o)
+	}
+
+	var rel0 *models.User
+
+	if o.r.User.o.alreadyPersisted {
+		rel0 = o.r.User.o.Build()
+	} else {
+		rel0, err = o.r.User.o.Create(ctx, exec)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	opt.UserID = omit.From(rel0.ID)
+
+	m, err := models.Items.Insert(opt).One(ctx, exec)
+	if err != nil {
+		return nil, err
+	}
+
+	m.R.User = rel0
+
+	if err := o.insertOptRels(ctx, exec, m); err != nil {
+		return nil, err
+	}
 	return m, err
 }
 
@@ -214,7 +247,7 @@ func (o *ItemTemplate) Create(ctx context.Context, exec bob.Executor) (*models.I
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o *ItemTemplate) MustCreate(ctx context.Context, exec bob.Executor) *models.Item {
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		panic(err)
 	}
@@ -226,7 +259,7 @@ func (o *ItemTemplate) MustCreate(ctx context.Context, exec bob.Executor) *model
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o *ItemTemplate) CreateOrFail(ctx context.Context, tb testing.TB, exec bob.Executor) *models.Item {
 	tb.Helper()
-	_, m, err := o.create(ctx, exec)
+	m, err := o.Create(ctx, exec)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
@@ -234,52 +267,27 @@ func (o *ItemTemplate) CreateOrFail(ctx context.Context, tb testing.TB, exec bob
 	return m
 }
 
-// create builds a item and inserts it into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted model
-func (o *ItemTemplate) create(ctx context.Context, exec bob.Executor) (context.Context, *models.Item, error) {
-	var err error
-	opt := o.BuildSetter()
-	ensureCreatableItem(opt)
-
-	if o.r.User == nil {
-		ItemMods.WithNewUser().Apply(ctx, o)
-	}
-
-	rel0, ok := userCtx.Value(ctx)
-	if !ok {
-		ctx, rel0, err = o.r.User.o.create(ctx, exec)
-		if err != nil {
-			return ctx, nil, err
-		}
-	}
-
-	opt.UserID = &rel0.ID
-
-	m, err := models.Items.Insert(opt).One(ctx, exec)
-	if err != nil {
-		return ctx, nil, err
-	}
-	ctx = itemCtx.WithValue(ctx, m)
-
-	m.R.User = rel0
-
-	ctx, err = o.insertOptRels(ctx, exec, m)
-	return ctx, m, err
-}
-
 // CreateMany builds multiple items and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 func (o ItemTemplate) CreateMany(ctx context.Context, exec bob.Executor, number int) (models.ItemSlice, error) {
-	_, m, err := o.createMany(ctx, exec, number)
-	return m, err
+	var err error
+	m := make(models.ItemSlice, number)
+
+	for i := range m {
+		m[i], err = o.Create(ctx, exec)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return m, nil
 }
 
 // MustCreateMany builds multiple items and inserts them into the database
 // Relations objects are also inserted and placed in the .R field
 // panics if an error occurs
 func (o ItemTemplate) MustCreateMany(ctx context.Context, exec bob.Executor, number int) models.ItemSlice {
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		panic(err)
 	}
@@ -291,29 +299,12 @@ func (o ItemTemplate) MustCreateMany(ctx context.Context, exec bob.Executor, num
 // It calls `tb.Fatal(err)` on the test/benchmark if an error occurs
 func (o ItemTemplate) CreateManyOrFail(ctx context.Context, tb testing.TB, exec bob.Executor, number int) models.ItemSlice {
 	tb.Helper()
-	_, m, err := o.createMany(ctx, exec, number)
+	m, err := o.CreateMany(ctx, exec, number)
 	if err != nil {
 		tb.Fatal(err)
 		return nil
 	}
 	return m
-}
-
-// createMany builds multiple items and inserts them into the database
-// Relations objects are also inserted and placed in the .R field
-// this returns a context that includes the newly inserted models
-func (o ItemTemplate) createMany(ctx context.Context, exec bob.Executor, number int) (context.Context, models.ItemSlice, error) {
-	var err error
-	m := make(models.ItemSlice, number)
-
-	for i := range m {
-		ctx, m[i], err = o.create(ctx, exec)
-		if err != nil {
-			return ctx, nil, err
-		}
-	}
-
-	return ctx, m, nil
 }
 
 // Item has methods that act as mods for the ItemTemplate
@@ -558,7 +549,7 @@ func (m itemMods) WithParentsCascading() ItemMod {
 		ctx = itemWithParentsCascadingCtx.WithValue(ctx, true)
 		{
 
-			related := o.f.NewUser(ctx, UserMods.WithParentsCascading())
+			related := o.f.NewUserWithContext(ctx, UserMods.WithParentsCascading())
 			m.WithUser(related).Apply(ctx, o)
 		}
 	})
@@ -574,9 +565,17 @@ func (m itemMods) WithUser(rel *UserTemplate) ItemMod {
 
 func (m itemMods) WithNewUser(mods ...UserMod) ItemMod {
 	return ItemModFunc(func(ctx context.Context, o *ItemTemplate) {
-		related := o.f.NewUser(ctx, mods...)
+		related := o.f.NewUserWithContext(ctx, mods...)
 
 		m.WithUser(related).Apply(ctx, o)
+	})
+}
+
+func (m itemMods) WithExistingUser(em *models.User) ItemMod {
+	return ItemModFunc(func(ctx context.Context, o *ItemTemplate) {
+		o.r.User = &itemRUserR{
+			o: o.f.FromExistingUser(em),
+		}
 	})
 }
 

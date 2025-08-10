@@ -11,6 +11,6 @@ var clientfs embed.FS
 var dbfs embed.FS
 
 func init() {
-	ClientFS = clientfs
-	DBFS = dbfs
+	clientFS = clientfs
+	dbFS = dbfs
 }

@@ -5,11 +5,13 @@ package models
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"time"
 
+	"github.com/aarondl/opt/null"
+	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
@@ -26,12 +28,12 @@ type Credential struct {
 	CredID                string           `db:"cred_id,pk" `
 	CredPublicKey         []byte           `db:"cred_public_key" `
 	SignCount             int32            `db:"sign_count" `
-	Transports            sql.Null[string] `db:"transports" `
-	UserVerified          sql.Null[bool]   `db:"user_verified" `
-	BackupEligible        sql.Null[bool]   `db:"backup_eligible" `
-	BackupState           sql.Null[bool]   `db:"backup_state" `
-	AttestationObject     sql.Null[[]byte] `db:"attestation_object" `
-	AttestationClientData sql.Null[[]byte] `db:"attestation_client_data" `
+	Transports            null.Val[string] `db:"transports" `
+	UserVerified          null.Val[bool]   `db:"user_verified" `
+	BackupEligible        null.Val[bool]   `db:"backup_eligible" `
+	BackupState           null.Val[bool]   `db:"backup_state" `
+	AttestationObject     null.Val[[]byte] `db:"attestation_object" `
+	AttestationClientData null.Val[[]byte] `db:"attestation_client_data" `
 	CreatedAt             time.Time        `db:"created_at" `
 	LastUsed              time.Time        `db:"last_used" `
 	UserID                int32            `db:"user_id" `
@@ -166,109 +168,97 @@ type credentialErrors struct {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type CredentialSetter struct {
-	CredID                *string           `db:"cred_id,pk" `
-	CredPublicKey         *[]byte           `db:"cred_public_key" `
-	SignCount             *int32            `db:"sign_count" `
-	Transports            *sql.Null[string] `db:"transports" `
-	UserVerified          *sql.Null[bool]   `db:"user_verified" `
-	BackupEligible        *sql.Null[bool]   `db:"backup_eligible" `
-	BackupState           *sql.Null[bool]   `db:"backup_state" `
-	AttestationObject     *sql.Null[[]byte] `db:"attestation_object" `
-	AttestationClientData *sql.Null[[]byte] `db:"attestation_client_data" `
-	CreatedAt             *time.Time        `db:"created_at" `
-	LastUsed              *time.Time        `db:"last_used" `
-	UserID                *int32            `db:"user_id" `
+	CredID                omit.Val[string]     `db:"cred_id,pk" `
+	CredPublicKey         omit.Val[[]byte]     `db:"cred_public_key" `
+	SignCount             omit.Val[int32]      `db:"sign_count" `
+	Transports            omitnull.Val[string] `db:"transports" `
+	UserVerified          omitnull.Val[bool]   `db:"user_verified" `
+	BackupEligible        omitnull.Val[bool]   `db:"backup_eligible" `
+	BackupState           omitnull.Val[bool]   `db:"backup_state" `
+	AttestationObject     omitnull.Val[[]byte] `db:"attestation_object" `
+	AttestationClientData omitnull.Val[[]byte] `db:"attestation_client_data" `
+	CreatedAt             omit.Val[time.Time]  `db:"created_at" `
+	LastUsed              omit.Val[time.Time]  `db:"last_used" `
+	UserID                omit.Val[int32]      `db:"user_id" `
 }
 
 func (s CredentialSetter) SetColumns() []string {
 	vals := make([]string, 0, 12)
-	if s.CredID != nil {
+	if s.CredID.IsValue() {
 		vals = append(vals, "cred_id")
 	}
-
-	if s.CredPublicKey != nil {
+	if s.CredPublicKey.IsValue() {
 		vals = append(vals, "cred_public_key")
 	}
-
-	if s.SignCount != nil {
+	if s.SignCount.IsValue() {
 		vals = append(vals, "sign_count")
 	}
-
-	if s.Transports != nil {
+	if !s.Transports.IsUnset() {
 		vals = append(vals, "transports")
 	}
-
-	if s.UserVerified != nil {
+	if !s.UserVerified.IsUnset() {
 		vals = append(vals, "user_verified")
 	}
-
-	if s.BackupEligible != nil {
+	if !s.BackupEligible.IsUnset() {
 		vals = append(vals, "backup_eligible")
 	}
-
-	if s.BackupState != nil {
+	if !s.BackupState.IsUnset() {
 		vals = append(vals, "backup_state")
 	}
-
-	if s.AttestationObject != nil {
+	if !s.AttestationObject.IsUnset() {
 		vals = append(vals, "attestation_object")
 	}
-
-	if s.AttestationClientData != nil {
+	if !s.AttestationClientData.IsUnset() {
 		vals = append(vals, "attestation_client_data")
 	}
-
-	if s.CreatedAt != nil {
+	if s.CreatedAt.IsValue() {
 		vals = append(vals, "created_at")
 	}
-
-	if s.LastUsed != nil {
+	if s.LastUsed.IsValue() {
 		vals = append(vals, "last_used")
 	}
-
-	if s.UserID != nil {
+	if s.UserID.IsValue() {
 		vals = append(vals, "user_id")
 	}
-
 	return vals
 }
 
 func (s CredentialSetter) Overwrite(t *Credential) {
-	if s.CredID != nil {
-		t.CredID = *s.CredID
+	if s.CredID.IsValue() {
+		t.CredID = s.CredID.MustGet()
 	}
-	if s.CredPublicKey != nil {
-		t.CredPublicKey = *s.CredPublicKey
+	if s.CredPublicKey.IsValue() {
+		t.CredPublicKey = s.CredPublicKey.MustGet()
 	}
-	if s.SignCount != nil {
-		t.SignCount = *s.SignCount
+	if s.SignCount.IsValue() {
+		t.SignCount = s.SignCount.MustGet()
 	}
-	if s.Transports != nil {
-		t.Transports = *s.Transports
+	if !s.Transports.IsUnset() {
+		t.Transports = s.Transports.MustGetNull()
 	}
-	if s.UserVerified != nil {
-		t.UserVerified = *s.UserVerified
+	if !s.UserVerified.IsUnset() {
+		t.UserVerified = s.UserVerified.MustGetNull()
 	}
-	if s.BackupEligible != nil {
-		t.BackupEligible = *s.BackupEligible
+	if !s.BackupEligible.IsUnset() {
+		t.BackupEligible = s.BackupEligible.MustGetNull()
 	}
-	if s.BackupState != nil {
-		t.BackupState = *s.BackupState
+	if !s.BackupState.IsUnset() {
+		t.BackupState = s.BackupState.MustGetNull()
 	}
-	if s.AttestationObject != nil {
-		t.AttestationObject = *s.AttestationObject
+	if !s.AttestationObject.IsUnset() {
+		t.AttestationObject = s.AttestationObject.MustGetNull()
 	}
-	if s.AttestationClientData != nil {
-		t.AttestationClientData = *s.AttestationClientData
+	if !s.AttestationClientData.IsUnset() {
+		t.AttestationClientData = s.AttestationClientData.MustGetNull()
 	}
-	if s.CreatedAt != nil {
-		t.CreatedAt = *s.CreatedAt
+	if s.CreatedAt.IsValue() {
+		t.CreatedAt = s.CreatedAt.MustGet()
 	}
-	if s.LastUsed != nil {
-		t.LastUsed = *s.LastUsed
+	if s.LastUsed.IsValue() {
+		t.LastUsed = s.LastUsed.MustGet()
 	}
-	if s.UserID != nil {
-		t.UserID = *s.UserID
+	if s.UserID.IsValue() {
+		t.UserID = s.UserID.MustGet()
 	}
 }
 
@@ -287,52 +277,52 @@ func (s *CredentialSetter) Apply(q *dialect.InsertQuery) {
 
 	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
 		vals := make([]bob.Expression, 0, 12)
-		if s.CredID != nil {
-			vals = append(vals, sqlite.Arg(s.CredID))
+		if s.CredID.IsValue() {
+			vals = append(vals, sqlite.Arg(s.CredID.MustGet()))
 		}
 
-		if s.CredPublicKey != nil {
-			vals = append(vals, sqlite.Arg(s.CredPublicKey))
+		if s.CredPublicKey.IsValue() {
+			vals = append(vals, sqlite.Arg(s.CredPublicKey.MustGet()))
 		}
 
-		if s.SignCount != nil {
-			vals = append(vals, sqlite.Arg(s.SignCount))
+		if s.SignCount.IsValue() {
+			vals = append(vals, sqlite.Arg(s.SignCount.MustGet()))
 		}
 
-		if s.Transports != nil {
-			vals = append(vals, sqlite.Arg(s.Transports))
+		if !s.Transports.IsUnset() {
+			vals = append(vals, sqlite.Arg(s.Transports.MustGetNull()))
 		}
 
-		if s.UserVerified != nil {
-			vals = append(vals, sqlite.Arg(s.UserVerified))
+		if !s.UserVerified.IsUnset() {
+			vals = append(vals, sqlite.Arg(s.UserVerified.MustGetNull()))
 		}
 
-		if s.BackupEligible != nil {
-			vals = append(vals, sqlite.Arg(s.BackupEligible))
+		if !s.BackupEligible.IsUnset() {
+			vals = append(vals, sqlite.Arg(s.BackupEligible.MustGetNull()))
 		}
 
-		if s.BackupState != nil {
-			vals = append(vals, sqlite.Arg(s.BackupState))
+		if !s.BackupState.IsUnset() {
+			vals = append(vals, sqlite.Arg(s.BackupState.MustGetNull()))
 		}
 
-		if s.AttestationObject != nil {
-			vals = append(vals, sqlite.Arg(s.AttestationObject))
+		if !s.AttestationObject.IsUnset() {
+			vals = append(vals, sqlite.Arg(s.AttestationObject.MustGetNull()))
 		}
 
-		if s.AttestationClientData != nil {
-			vals = append(vals, sqlite.Arg(s.AttestationClientData))
+		if !s.AttestationClientData.IsUnset() {
+			vals = append(vals, sqlite.Arg(s.AttestationClientData.MustGetNull()))
 		}
 
-		if s.CreatedAt != nil {
-			vals = append(vals, sqlite.Arg(s.CreatedAt))
+		if s.CreatedAt.IsValue() {
+			vals = append(vals, sqlite.Arg(s.CreatedAt.MustGet()))
 		}
 
-		if s.LastUsed != nil {
-			vals = append(vals, sqlite.Arg(s.LastUsed))
+		if s.LastUsed.IsValue() {
+			vals = append(vals, sqlite.Arg(s.LastUsed.MustGet()))
 		}
 
-		if s.UserID != nil {
-			vals = append(vals, sqlite.Arg(s.UserID))
+		if s.UserID.IsValue() {
+			vals = append(vals, sqlite.Arg(s.UserID.MustGet()))
 		}
 
 		if len(vals) == 0 {
@@ -350,84 +340,84 @@ func (s CredentialSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 func (s CredentialSetter) Expressions(prefix ...string) []bob.Expression {
 	exprs := make([]bob.Expression, 0, 12)
 
-	if s.CredID != nil {
+	if s.CredID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "cred_id")...),
 			sqlite.Arg(s.CredID),
 		}})
 	}
 
-	if s.CredPublicKey != nil {
+	if s.CredPublicKey.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "cred_public_key")...),
 			sqlite.Arg(s.CredPublicKey),
 		}})
 	}
 
-	if s.SignCount != nil {
+	if s.SignCount.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "sign_count")...),
 			sqlite.Arg(s.SignCount),
 		}})
 	}
 
-	if s.Transports != nil {
+	if !s.Transports.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "transports")...),
 			sqlite.Arg(s.Transports),
 		}})
 	}
 
-	if s.UserVerified != nil {
+	if !s.UserVerified.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "user_verified")...),
 			sqlite.Arg(s.UserVerified),
 		}})
 	}
 
-	if s.BackupEligible != nil {
+	if !s.BackupEligible.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "backup_eligible")...),
 			sqlite.Arg(s.BackupEligible),
 		}})
 	}
 
-	if s.BackupState != nil {
+	if !s.BackupState.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "backup_state")...),
 			sqlite.Arg(s.BackupState),
 		}})
 	}
 
-	if s.AttestationObject != nil {
+	if !s.AttestationObject.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "attestation_object")...),
 			sqlite.Arg(s.AttestationObject),
 		}})
 	}
 
-	if s.AttestationClientData != nil {
+	if !s.AttestationClientData.IsUnset() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "attestation_client_data")...),
 			sqlite.Arg(s.AttestationClientData),
 		}})
 	}
 
-	if s.CreatedAt != nil {
+	if s.CreatedAt.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "created_at")...),
 			sqlite.Arg(s.CreatedAt),
 		}})
 	}
 
-	if s.LastUsed != nil {
+	if s.LastUsed.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "last_used")...),
 			sqlite.Arg(s.LastUsed),
 		}})
 	}
 
-	if s.UserID != nil {
+	if s.UserID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "user_id")...),
 			sqlite.Arg(s.UserID),
@@ -808,7 +798,12 @@ func (os CredentialSlice) LoadUser(ctx context.Context, exec bob.Executor, mods 
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		for _, rel := range users {
+
 			if o.UserID != rel.ID {
 				continue
 			}
@@ -825,7 +820,7 @@ func (os CredentialSlice) LoadUser(ctx context.Context, exec bob.Executor, mods 
 
 func attachCredentialUser0(ctx context.Context, exec bob.Executor, count int, credential0 *Credential, user1 *User) (*Credential, error) {
 	setter := &CredentialSetter{
-		UserID: &user1.ID,
+		UserID: omit.From(user1.ID),
 	}
 
 	err := credential0.Update(ctx, exec, setter)

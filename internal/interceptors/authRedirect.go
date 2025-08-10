@@ -13,20 +13,14 @@ func WithAuthRedirect(next http.Handler, auth *auth.Auth) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		pathItems := strings.Split(r.URL.Path, "/")
 
-		if len(pathItems) < 2 {
-			http.Error(w, "Not found", http.StatusNotFound)
-			return
-		}
-
 		// Check if the user is authenticated
 		authenticated := false
 		cookies := getCookies(r.Header.Get("Cookie"))
 		for _, cookie := range cookies {
-			if cookie.Name == "token" {
+			if cookie.Name == CookieTokenName {
 				user, err := auth.GetUserFromToken(cookie.Value)
 				if err == nil {
-					ctx := auth.NewContext(r.Context(), user)
-					r = r.WithContext(ctx)
+					r = r.WithContext(auth.NewContext(r.Context(), user))
 					authenticated = true
 				}
 
@@ -35,7 +29,6 @@ func WithAuthRedirect(next http.Handler, auth *auth.Auth) http.Handler {
 		}
 
 		switch pathItems[1] {
-
 		case "auth":
 			if authenticated {
 				http.Redirect(w, r, "/", http.StatusFound)

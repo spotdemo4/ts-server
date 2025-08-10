@@ -5,10 +5,11 @@ package models
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 
+	"github.com/aarondl/opt/omit"
+	"github.com/aarondl/opt/omitnull"
 	"github.com/stephenafamo/bob"
 	"github.com/stephenafamo/bob/dialect/sqlite"
 	"github.com/stephenafamo/bob/dialect/sqlite/dialect"
@@ -118,45 +119,41 @@ type fileErrors struct {
 // All values are optional, and do not have to be set
 // Generated columns are not included
 type FileSetter struct {
-	ID     *int32  `db:"id,pk" `
-	Name   *string `db:"name" `
-	Data   *[]byte `db:"data" `
-	UserID *int32  `db:"user_id" `
+	ID     omit.Val[int32]  `db:"id,pk" `
+	Name   omit.Val[string] `db:"name" `
+	Data   omit.Val[[]byte] `db:"data" `
+	UserID omit.Val[int32]  `db:"user_id" `
 }
 
 func (s FileSetter) SetColumns() []string {
 	vals := make([]string, 0, 4)
-	if s.ID != nil {
+	if s.ID.IsValue() {
 		vals = append(vals, "id")
 	}
-
-	if s.Name != nil {
+	if s.Name.IsValue() {
 		vals = append(vals, "name")
 	}
-
-	if s.Data != nil {
+	if s.Data.IsValue() {
 		vals = append(vals, "data")
 	}
-
-	if s.UserID != nil {
+	if s.UserID.IsValue() {
 		vals = append(vals, "user_id")
 	}
-
 	return vals
 }
 
 func (s FileSetter) Overwrite(t *File) {
-	if s.ID != nil {
-		t.ID = *s.ID
+	if s.ID.IsValue() {
+		t.ID = s.ID.MustGet()
 	}
-	if s.Name != nil {
-		t.Name = *s.Name
+	if s.Name.IsValue() {
+		t.Name = s.Name.MustGet()
 	}
-	if s.Data != nil {
-		t.Data = *s.Data
+	if s.Data.IsValue() {
+		t.Data = s.Data.MustGet()
 	}
-	if s.UserID != nil {
-		t.UserID = *s.UserID
+	if s.UserID.IsValue() {
+		t.UserID = s.UserID.MustGet()
 	}
 }
 
@@ -175,20 +172,20 @@ func (s *FileSetter) Apply(q *dialect.InsertQuery) {
 
 	q.AppendValues(bob.ExpressionFunc(func(ctx context.Context, w io.Writer, d bob.Dialect, start int) ([]any, error) {
 		vals := make([]bob.Expression, 0, 4)
-		if s.ID != nil {
-			vals = append(vals, sqlite.Arg(s.ID))
+		if s.ID.IsValue() {
+			vals = append(vals, sqlite.Arg(s.ID.MustGet()))
 		}
 
-		if s.Name != nil {
-			vals = append(vals, sqlite.Arg(s.Name))
+		if s.Name.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Name.MustGet()))
 		}
 
-		if s.Data != nil {
-			vals = append(vals, sqlite.Arg(s.Data))
+		if s.Data.IsValue() {
+			vals = append(vals, sqlite.Arg(s.Data.MustGet()))
 		}
 
-		if s.UserID != nil {
-			vals = append(vals, sqlite.Arg(s.UserID))
+		if s.UserID.IsValue() {
+			vals = append(vals, sqlite.Arg(s.UserID.MustGet()))
 		}
 
 		if len(vals) == 0 {
@@ -206,28 +203,28 @@ func (s FileSetter) UpdateMod() bob.Mod[*dialect.UpdateQuery] {
 func (s FileSetter) Expressions(prefix ...string) []bob.Expression {
 	exprs := make([]bob.Expression, 0, 4)
 
-	if s.ID != nil {
+	if s.ID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "id")...),
 			sqlite.Arg(s.ID),
 		}})
 	}
 
-	if s.Name != nil {
+	if s.Name.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "name")...),
 			sqlite.Arg(s.Name),
 		}})
 	}
 
-	if s.Data != nil {
+	if s.Data.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "data")...),
 			sqlite.Arg(s.Data),
 		}})
 	}
 
-	if s.UserID != nil {
+	if s.UserID.IsValue() {
 		exprs = append(exprs, expr.Join{Sep: " = ", Exprs: []bob.Expression{
 			sqlite.Quote(append(prefix, "user_id")...),
 			sqlite.Arg(s.UserID),
@@ -666,7 +663,12 @@ func (os FileSlice) LoadUser(ctx context.Context, exec bob.Executor, mods ...bob
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		for _, rel := range users {
+
 			if o.UserID != rel.ID {
 				continue
 			}
@@ -715,12 +717,24 @@ func (os FileSlice) LoadProfilePictureUsers(ctx context.Context, exec bob.Execut
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		o.R.ProfilePictureUsers = nil
 	}
 
 	for _, o := range os {
+		if o == nil {
+			continue
+		}
+
 		for _, rel := range users {
-			if o.ID != rel.ProfilePictureID.V {
+
+			if !rel.ProfilePictureID.IsValue() {
+				continue
+			}
+			if o.ID != rel.ProfilePictureID.MustGet() {
 				continue
 			}
 
@@ -735,7 +749,7 @@ func (os FileSlice) LoadProfilePictureUsers(ctx context.Context, exec bob.Execut
 
 func attachFileUser0(ctx context.Context, exec bob.Executor, count int, file0 *File, user1 *User) (*File, error) {
 	setter := &FileSetter{
-		UserID: &user1.ID,
+		UserID: omit.From(user1.ID),
 	}
 
 	err := file0.Update(ctx, exec, setter)
@@ -781,10 +795,7 @@ func (file0 *File) AttachUser(ctx context.Context, exec bob.Executor, user1 *Use
 
 func insertFileProfilePictureUsers0(ctx context.Context, exec bob.Executor, users1 []*UserSetter, file0 *File) (UserSlice, error) {
 	for i := range users1 {
-		users1[i].ProfilePictureID = func() *sql.Null[int32] {
-			v := sql.Null[int32]{V: file0.ID, Valid: true}
-			return &v
-		}()
+		users1[i].ProfilePictureID = omitnull.From(file0.ID)
 	}
 
 	ret, err := Users.Insert(bob.ToMods(users1...)).All(ctx, exec)
@@ -797,10 +808,7 @@ func insertFileProfilePictureUsers0(ctx context.Context, exec bob.Executor, user
 
 func attachFileProfilePictureUsers0(ctx context.Context, exec bob.Executor, count int, users1 UserSlice, file0 *File) (UserSlice, error) {
 	setter := &UserSetter{
-		ProfilePictureID: func() *sql.Null[int32] {
-			v := sql.Null[int32]{V: file0.ID, Valid: true}
-			return &v
-		}(),
+		ProfilePictureID: omitnull.From(file0.ID),
 	}
 
 	err := users1.UpdateAll(ctx, exec, *setter)

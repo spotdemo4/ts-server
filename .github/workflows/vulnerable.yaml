@@ -1,4 +1,4 @@
-name: flake
+name: vulnerable
 
 on:
   schedule:
@@ -16,4 +16,4 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
       - uses: DeterminateSystems/magic-nix-cache-action@565684385bcd71bad329742eefe8d12f2e765b39 # v13
 
-      - run: nix develop --accept-flake-config --command flake-checker -f
+      - run: nix develop --accept-flake-config --command govulncheck ./...
