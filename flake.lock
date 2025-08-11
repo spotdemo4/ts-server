@@ -89,11 +89,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1752658783,
-        "narHash": "sha256-tgi3xJhy0E6bVL2gCPBVqwItoRCptp+F9XiRMogxOME=",
+        "lastModified": 1753881041,
+        "narHash": "sha256-WUFIJxC9Djf8stYunO4da3j6C2N41B7x2QLVcoXtE+E=",
         "owner": "nix-community",
         "repo": "NUR",
-        "rev": "c5750e669e2712fed3e5e5a3b68ed8415d9ca214",
+        "rev": "642736eaf8034e0e6efd722aa0cd07082cd37637",
         "type": "github"
       },
       "original": {
@@ -109,7 +109,7 @@
         "semgrep-rules": "semgrep-rules",
         "systems": "systems",
         "ts-web": "ts-web",
-        "utils": "utils"
+        "utils": "utils_2"
       }
     },
     "semgrep-rules": {
@@ -131,11 +131,11 @@
     "semgrep-rules_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1752521337,
-        "narHash": "sha256-CkR0L7vZXIPALP6N2JixRRnC+JQTt8S2LyrVFrwSu3k=",
+        "lastModified": 1753466348,
+        "narHash": "sha256-ZMDAYXGSgCH+r3JTHCM7iq45WPoRqG/0gXG9Onp6dbw=",
         "owner": "semgrep",
         "repo": "semgrep-rules",
-        "rev": "0a156cffa72cc89e22841cf29440dda889102335",
+        "rev": "e9596407245754d555b9c1a35c50955251c34a46",
         "type": "github"
       },
       "original": {
@@ -158,31 +158,68 @@
         "type": "indirect"
       }
     },
+    "systems_2": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "id": "systems",
+        "type": "indirect"
+      }
+    },
     "ts-web": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
         ],
         "nur": "nur_2",
-        "semgrep-rules": "semgrep-rules_2"
+        "semgrep-rules": "semgrep-rules_2",
+        "systems": "systems_2",
+        "utils": "utils"
       },
       "locked": {
-        "lastModified": 1752675545,
-        "narHash": "sha256-2iO1APE7WHQ3uFntJeJa9nFSQlvyZota9/JQACvgBbE=",
+        "lastModified": 1754920886,
+        "narHash": "sha256-gUWNEFSr3o/Z1OscGiJNTTfkOIHQMKwIWbHRkNn4ym0=",
         "ref": "latest",
-        "rev": "87d8340bf3504ae331febbabedf2c548efadbb12",
-        "revCount": 201,
+        "rev": "4c8efff5e22a449d44a24a05abbcc10b201499a1",
+        "revCount": 302,
         "type": "git",
         "url": "https://github.com/spotdemo4/ts-web"
       },
       "original": {
         "ref": "latest",
-        "rev": "87d8340bf3504ae331febbabedf2c548efadbb12",
+        "rev": "4c8efff5e22a449d44a24a05abbcc10b201499a1",
         "type": "git",
         "url": "https://github.com/spotdemo4/ts-web"
       }
     },
     "utils": {
+      "inputs": {
+        "systems": [
+          "ts-web",
+          "systems"
+        ]
+      },
+      "locked": {
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "flake-utils",
+        "type": "github"
+      }
+    },
+    "utils_2": {
       "inputs": {
         "systems": [
           "systems"
