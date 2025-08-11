@@ -169,16 +169,17 @@
       "locked": {
         "lastModified": 1752675545,
         "narHash": "sha256-2iO1APE7WHQ3uFntJeJa9nFSQlvyZota9/JQACvgBbE=",
-        "owner": "spotdemo4",
-        "repo": "ts-web",
+        "ref": "latest",
         "rev": "87d8340bf3504ae331febbabedf2c548efadbb12",
-        "type": "github"
+        "revCount": 201,
+        "type": "git",
+        "url": "https://github.com/spotdemo4/ts-web"
       },
       "original": {
-        "owner": "spotdemo4",
         "ref": "latest",
-        "repo": "ts-web",
-        "type": "github"
+        "rev": "87d8340bf3504ae331febbabedf2c548efadbb12",
+        "type": "git",
+        "url": "https://github.com/spotdemo4/ts-web"
       }
     },
     "utils": {
