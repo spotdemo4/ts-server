@@ -26,7 +26,7 @@
       flake = false;
     };
     ts-web = {
-      url = "git+https://github.com/spotdemo4/ts-web?ref=latest&rev=87d8340bf3504ae331febbabedf2c548efadbb12";
+      url = "git+https://github.com/spotdemo4/ts-web?ref=latest&rev=4c8efff5e22a449d44a24a05abbcc10b201499a1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
