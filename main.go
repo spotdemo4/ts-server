@@ -44,9 +44,10 @@ func main() {
 	}
 
 	// Create interceptors
-	ai := interceptors.NewAuthInterceptor(base.Auth) // Auth interceptor for user authentication
-	ri := interceptors.NewRateLimitInterceptor()     // Rate limit interceptor for protecting endpoints
-	vi, err := validate.NewInterceptor()             // Validator interceptor for validating requests
+	li := interceptors.NewLoggingInterceptor(base.Log) // Logging interceptor for request logging
+	ai := interceptors.NewAuthInterceptor(base.Auth)   // Auth interceptor for user authentication
+	ri := interceptors.NewRateLimitInterceptor()       // Rate limit interceptor for protecting endpoints
+	vi, err := validate.NewInterceptor()               // Validator interceptor for validating requests
 	if err != nil {
 		base.Log.Error("failed to create validator interceptor", "error", err)
 		return
@@ -54,9 +55,9 @@ func main() {
 
 	// Serve gRPC Handlers
 	api := http.NewServeMux()
-	api.Handle(interceptors.WithCORS(userv1.New(base, connect.WithInterceptors(vi, ai))))     // User handler
-	api.Handle(interceptors.WithCORS(userv1.NewAuth(base, connect.WithInterceptors(vi, ri)))) // User auth handler
-	api.Handle(interceptors.WithCORS(itemv1.New(base, connect.WithInterceptors(vi, ai))))     // Item handler
+	api.Handle(interceptors.WithCORS(userv1.New(base, connect.WithInterceptors(li, vi, ai))))     // User handler
+	api.Handle(interceptors.WithCORS(userv1.NewAuth(base, connect.WithInterceptors(li, vi, ri)))) // User auth handler
+	api.Handle(interceptors.WithCORS(itemv1.New(base, connect.WithInterceptors(li, vi, ai))))     // Item handler
 
 	// Serve web interface
 	mux := http.NewServeMux()
