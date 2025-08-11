@@ -12,8 +12,8 @@ jobs:
   govulncheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
       - uses: DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
-      - uses: spotdemo4/nix-simple-cache-action@3aa273941e1087e6568174230b15a441d6edfb81 # v1.1.7
+      - uses: spotdemo4/nix-simple-cache-action@065b9a7056a4dd6f0f486418559b56e45e4c147c # v1.1.8
 
       - run: nix develop --accept-flake-config --command govulncheck ./...
