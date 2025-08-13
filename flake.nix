@@ -54,6 +54,7 @@
           go
           gotools
           gopls
+          air
           golangci-lint
           govulncheck
 
