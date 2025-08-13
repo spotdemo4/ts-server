@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
-      - uses: spotdemo4/nix-simple-cache-action@065b9a7056a4dd6f0f486418559b56e45e4c147c # v1.1.8
+      - uses: spotdemo4/nix-simple-cache-action@1edae584c42f4e7fd7aced0c751956f6586fcbcd # v1.1.10
 
       - run: nix flake check -L --accept-flake-config
 
@@ -25,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
-      - uses: spotdemo4/nix-simple-cache-action@065b9a7056a4dd6f0f486418559b56e45e4c147c # v1.1.8
+      - uses: spotdemo4/nix-simple-cache-action@1edae584c42f4e7fd7aced0c751956f6586fcbcd # v1.1.10
 
       - run: |
           mkdir binaries
@@ -64,7 +64,7 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
       - uses: DeterminateSystems/nix-installer-action@90bb610b90bf290cad97484ba341453bd1cbefea # v19
-      - uses: spotdemo4/nix-simple-cache-action@065b9a7056a4dd6f0f486418559b56e45e4c147c # v1.1.8
+      - uses: spotdemo4/nix-simple-cache-action@1edae584c42f4e7fd7aced0c751956f6586fcbcd # v1.1.10
 
       - uses: nicknovitski/nix-develop@9be7cfb4b10451d3390a75dc18ad0465bed4932a # v1.2.1
         with:
