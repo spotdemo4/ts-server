@@ -3,8 +3,8 @@ package item
 import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
+	"github.com/spotdemo4/ts-server/internal/bob/models"
 	itemv1 "github.com/spotdemo4/ts-server/internal/connect/item/v1"
-	"github.com/spotdemo4/ts-server/internal/models"
 )
 
 func itemToConnect(item models.Item) *itemv1.Item {

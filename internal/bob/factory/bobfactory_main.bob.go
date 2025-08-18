@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/aarondl/opt/null"
-	models "github.com/spotdemo4/ts-server/internal/models"
+	models "github.com/spotdemo4/ts-server/internal/bob/models"
 )
 
 type Factory struct {

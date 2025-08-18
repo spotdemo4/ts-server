@@ -17,9 +17,9 @@ import (
 
 	"github.com/spotdemo4/ts-server/internal/app"
 	"github.com/spotdemo4/ts-server/internal/auth"
+	"github.com/spotdemo4/ts-server/internal/bob/models"
 	userv1 "github.com/spotdemo4/ts-server/internal/connect/user/v1"
 	"github.com/spotdemo4/ts-server/internal/connect/user/v1/userv1connect"
-	"github.com/spotdemo4/ts-server/internal/models"
 )
 
 type Handler struct {

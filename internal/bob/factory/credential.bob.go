@@ -12,7 +12,7 @@ import (
 	"github.com/aarondl/opt/omit"
 	"github.com/aarondl/opt/omitnull"
 	"github.com/jaswdr/faker/v2"
-	models "github.com/spotdemo4/ts-server/internal/models"
+	models "github.com/spotdemo4/ts-server/internal/bob/models"
 	"github.com/stephenafamo/bob"
 )
 

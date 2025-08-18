@@ -13,7 +13,7 @@ import (
 	"github.com/stephenafamo/bob"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/spotdemo4/ts-server/internal/models"
+	"github.com/spotdemo4/ts-server/internal/bob/models"
 )
 
 const CookieMaxAge = 86400 // 1 day

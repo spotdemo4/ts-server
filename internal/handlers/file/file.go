@@ -13,8 +13,8 @@ import (
 
 	"github.com/spotdemo4/ts-server/internal/app"
 	"github.com/spotdemo4/ts-server/internal/auth"
+	"github.com/spotdemo4/ts-server/internal/bob/models"
 	"github.com/spotdemo4/ts-server/internal/interceptors"
-	"github.com/spotdemo4/ts-server/internal/models"
 )
 
 type Handler struct {

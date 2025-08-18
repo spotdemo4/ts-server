@@ -13,9 +13,9 @@ import (
 
 	"github.com/spotdemo4/ts-server/internal/app"
 	"github.com/spotdemo4/ts-server/internal/auth"
+	"github.com/spotdemo4/ts-server/internal/bob/models"
 	itemv1 "github.com/spotdemo4/ts-server/internal/connect/item/v1"
 	"github.com/spotdemo4/ts-server/internal/connect/item/v1/itemv1connect"
-	"github.com/spotdemo4/ts-server/internal/models"
 	"github.com/spotdemo4/ts-server/internal/putil"
 )
 

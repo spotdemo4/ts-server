@@ -10,20 +10,20 @@ plugins:
   dbinfo:
     disabled: false
     pkgname: 'dbinfo'
-    destination: 'internal/dbinfo'
+    destination: 'internal/bob/dbinfo'
   enums:
     disabled: false
     pkgname: 'enums'
-    destination: 'internal/enums'
+    destination: 'internal/bob/enums'
   models:
     disabled: false
     pkgname: 'models'
-    destination: 'internal/models'
+    destination: 'internal/bob/models'
   factory:
     disabled: false
     pkgname: 'factory'
-    destination: 'internal/factory'
+    destination: 'internal/bob/factory'
   dberrors:
     disabled: false
     pkgname: 'dberrors'
-    destination: 'internal/dberrors'
+    destination: 'internal/bob/dberrors'

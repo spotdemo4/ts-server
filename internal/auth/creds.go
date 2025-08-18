@@ -6,7 +6,7 @@ import (
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 
-	"github.com/spotdemo4/ts-server/internal/models"
+	"github.com/spotdemo4/ts-server/internal/bob/models"
 )
 
 func NewCreds(creds models.CredentialSlice) []webauthn.Credential {
