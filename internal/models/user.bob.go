@@ -38,7 +38,7 @@ type User struct {
 type UserSlice []*User
 
 // Users contains methods to work with the user table
-var Users = sqlite.NewTablex[*User, UserSlice, *UserSetter]("", "user")
+var Users = sqlite.NewTablex[*User, UserSlice, *UserSetter]("", "user", buildUserColumns("user"))
 
 // UsersQuery is a query on the user table
 type UsersQuery = *sqlite.ViewQuery[*User, UserSlice]
@@ -51,17 +51,22 @@ type userR struct {
 	ProfilePictureFile *File           // fk_user_0
 }
 
-type userColumnNames struct {
-	ID               string
-	Username         string
-	Password         string
-	ProfilePictureID string
-	WebauthnID       string
+func buildUserColumns(alias string) userColumns {
+	return userColumns{
+		ColumnsExpr: expr.NewColumnsExpr(
+			"id", "username", "password", "profile_picture_id", "webauthn_id",
+		).WithParent("user"),
+		tableAlias:       alias,
+		ID:               sqlite.Quote(alias, "id"),
+		Username:         sqlite.Quote(alias, "username"),
+		Password:         sqlite.Quote(alias, "password"),
+		ProfilePictureID: sqlite.Quote(alias, "profile_picture_id"),
+		WebauthnID:       sqlite.Quote(alias, "webauthn_id"),
+	}
 }
 
-var UserColumns = buildUserColumns("user")
-
 type userColumns struct {
+	expr.ColumnsExpr
 	tableAlias       string
 	ID               sqlite.Expression
 	Username         sqlite.Expression
@@ -76,52 +81,6 @@ func (c userColumns) Alias() string {
 
 func (userColumns) AliasedAs(alias string) userColumns {
 	return buildUserColumns(alias)
-}
-
-func buildUserColumns(alias string) userColumns {
-	return userColumns{
-		tableAlias:       alias,
-		ID:               sqlite.Quote(alias, "id"),
-		Username:         sqlite.Quote(alias, "username"),
-		Password:         sqlite.Quote(alias, "password"),
-		ProfilePictureID: sqlite.Quote(alias, "profile_picture_id"),
-		WebauthnID:       sqlite.Quote(alias, "webauthn_id"),
-	}
-}
-
-type userWhere[Q sqlite.Filterable] struct {
-	ID               sqlite.WhereMod[Q, int32]
-	Username         sqlite.WhereMod[Q, string]
-	Password         sqlite.WhereMod[Q, string]
-	ProfilePictureID sqlite.WhereNullMod[Q, int32]
-	WebauthnID       sqlite.WhereMod[Q, string]
-}
-
-func (userWhere[Q]) AliasedAs(alias string) userWhere[Q] {
-	return buildUserWhere[Q](buildUserColumns(alias))
-}
-
-func buildUserWhere[Q sqlite.Filterable](cols userColumns) userWhere[Q] {
-	return userWhere[Q]{
-		ID:               sqlite.Where[Q, int32](cols.ID),
-		Username:         sqlite.Where[Q, string](cols.Username),
-		Password:         sqlite.Where[Q, string](cols.Password),
-		ProfilePictureID: sqlite.WhereNull[Q, int32](cols.ProfilePictureID),
-		WebauthnID:       sqlite.Where[Q, string](cols.WebauthnID),
-	}
-}
-
-var UserErrors = &userErrors{
-	ErrUniquePkMainUser: &UniqueConstraintError{
-		schema:  "",
-		table:   "user",
-		columns: []string{"id"},
-		s:       "pk_main_user",
-	},
-}
-
-type userErrors struct {
-	ErrUniquePkMainUser *UniqueConstraintError
 }
 
 // UserSetter is used for insert/upsert/update operations
@@ -266,20 +225,20 @@ func (s UserSetter) Expressions(prefix ...string) []bob.Expression {
 func FindUser(ctx context.Context, exec bob.Executor, IDPK int32, cols ...string) (*User, error) {
 	if len(cols) == 0 {
 		return Users.Query(
-			SelectWhere.Users.ID.EQ(IDPK),
+			sm.Where(Users.Columns.ID.EQ(sqlite.Arg(IDPK))),
 		).One(ctx, exec)
 	}
 
 	return Users.Query(
-		SelectWhere.Users.ID.EQ(IDPK),
-		sm.Columns(Users.Columns().Only(cols...)),
+		sm.Where(Users.Columns.ID.EQ(sqlite.Arg(IDPK))),
+		sm.Columns(Users.Columns.Only(cols...)),
 	).One(ctx, exec)
 }
 
 // UserExists checks the presence of a single record by primary key
 func UserExists(ctx context.Context, exec bob.Executor, IDPK int32) (bool, error) {
 	return Users.Query(
-		SelectWhere.Users.ID.EQ(IDPK),
+		sm.Where(Users.Columns.ID.EQ(sqlite.Arg(IDPK))),
 	).Exists(ctx, exec)
 }
 
@@ -334,7 +293,7 @@ func (o *User) Delete(ctx context.Context, exec bob.Executor) error {
 // Reload refreshes the User using the executor
 func (o *User) Reload(ctx context.Context, exec bob.Executor) error {
 	o2, err := Users.Query(
-		SelectWhere.Users.ID.EQ(o.ID),
+		sm.Where(Users.Columns.ID.EQ(sqlite.Arg(o.ID))),
 	).One(ctx, exec)
 	if err != nil {
 		return err
@@ -484,84 +443,10 @@ func (o UserSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
-type userJoins[Q dialect.Joinable] struct {
-	typ                string
-	Credentials        modAs[Q, credentialColumns]
-	Files              modAs[Q, fileColumns]
-	Items              modAs[Q, itemColumns]
-	ProfilePictureFile modAs[Q, fileColumns]
-}
-
-func (j userJoins[Q]) aliasedAs(alias string) userJoins[Q] {
-	return buildUserJoins[Q](buildUserColumns(alias), j.typ)
-}
-
-func buildUserJoins[Q dialect.Joinable](cols userColumns, typ string) userJoins[Q] {
-	return userJoins[Q]{
-		typ: typ,
-		Credentials: modAs[Q, credentialColumns]{
-			c: CredentialColumns,
-			f: func(to credentialColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Credentials.Name().As(to.Alias())).On(
-						to.UserID.EQ(cols.ID),
-					))
-				}
-
-				return mods
-			},
-		},
-		Files: modAs[Q, fileColumns]{
-			c: FileColumns,
-			f: func(to fileColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Files.Name().As(to.Alias())).On(
-						to.UserID.EQ(cols.ID),
-					))
-				}
-
-				return mods
-			},
-		},
-		Items: modAs[Q, itemColumns]{
-			c: ItemColumns,
-			f: func(to itemColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Items.Name().As(to.Alias())).On(
-						to.UserID.EQ(cols.ID),
-					))
-				}
-
-				return mods
-			},
-		},
-		ProfilePictureFile: modAs[Q, fileColumns]{
-			c: FileColumns,
-			f: func(to fileColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Files.Name().As(to.Alias())).On(
-						to.ID.EQ(cols.ProfilePictureID),
-					))
-				}
-
-				return mods
-			},
-		},
-	}
-}
-
 // Credentials starts a query for related objects on credential
 func (o *User) Credentials(mods ...bob.Mod[*dialect.SelectQuery]) CredentialsQuery {
 	return Credentials.Query(append(mods,
-		sm.Where(CredentialColumns.UserID.EQ(sqlite.Arg(o.ID))),
+		sm.Where(Credentials.Columns.UserID.EQ(sqlite.Arg(o.ID))),
 	)...)
 }
 
@@ -573,14 +458,14 @@ func (os UserSlice) Credentials(mods ...bob.Mod[*dialect.SelectQuery]) Credentia
 	PKArgExpr := sqlite.Group(PKArgSlice...)
 
 	return Credentials.Query(append(mods,
-		sm.Where(sqlite.Group(CredentialColumns.UserID).OP("IN", PKArgExpr)),
+		sm.Where(sqlite.Group(Credentials.Columns.UserID).OP("IN", PKArgExpr)),
 	)...)
 }
 
 // Files starts a query for related objects on file
 func (o *User) Files(mods ...bob.Mod[*dialect.SelectQuery]) FilesQuery {
 	return Files.Query(append(mods,
-		sm.Where(FileColumns.UserID.EQ(sqlite.Arg(o.ID))),
+		sm.Where(Files.Columns.UserID.EQ(sqlite.Arg(o.ID))),
 	)...)
 }
 
@@ -592,14 +477,14 @@ func (os UserSlice) Files(mods ...bob.Mod[*dialect.SelectQuery]) FilesQuery {
 	PKArgExpr := sqlite.Group(PKArgSlice...)
 
 	return Files.Query(append(mods,
-		sm.Where(sqlite.Group(FileColumns.UserID).OP("IN", PKArgExpr)),
+		sm.Where(sqlite.Group(Files.Columns.UserID).OP("IN", PKArgExpr)),
 	)...)
 }
 
 // Items starts a query for related objects on item
 func (o *User) Items(mods ...bob.Mod[*dialect.SelectQuery]) ItemsQuery {
 	return Items.Query(append(mods,
-		sm.Where(ItemColumns.UserID.EQ(sqlite.Arg(o.ID))),
+		sm.Where(Items.Columns.UserID.EQ(sqlite.Arg(o.ID))),
 	)...)
 }
 
@@ -611,14 +496,14 @@ func (os UserSlice) Items(mods ...bob.Mod[*dialect.SelectQuery]) ItemsQuery {
 	PKArgExpr := sqlite.Group(PKArgSlice...)
 
 	return Items.Query(append(mods,
-		sm.Where(sqlite.Group(ItemColumns.UserID).OP("IN", PKArgExpr)),
+		sm.Where(sqlite.Group(Items.Columns.UserID).OP("IN", PKArgExpr)),
 	)...)
 }
 
 // ProfilePictureFile starts a query for related objects on file
 func (o *User) ProfilePictureFile(mods ...bob.Mod[*dialect.SelectQuery]) FilesQuery {
 	return Files.Query(append(mods,
-		sm.Where(FileColumns.ID.EQ(sqlite.Arg(o.ProfilePictureID))),
+		sm.Where(Files.Columns.ID.EQ(sqlite.Arg(o.ProfilePictureID))),
 	)...)
 }
 
@@ -630,8 +515,280 @@ func (os UserSlice) ProfilePictureFile(mods ...bob.Mod[*dialect.SelectQuery]) Fi
 	PKArgExpr := sqlite.Group(PKArgSlice...)
 
 	return Files.Query(append(mods,
-		sm.Where(sqlite.Group(FileColumns.ID).OP("IN", PKArgExpr)),
+		sm.Where(sqlite.Group(Files.Columns.ID).OP("IN", PKArgExpr)),
 	)...)
+}
+
+func insertUserCredentials0(ctx context.Context, exec bob.Executor, credentials1 []*CredentialSetter, user0 *User) (CredentialSlice, error) {
+	for i := range credentials1 {
+		credentials1[i].UserID = omit.From(user0.ID)
+	}
+
+	ret, err := Credentials.Insert(bob.ToMods(credentials1...)).All(ctx, exec)
+	if err != nil {
+		return ret, fmt.Errorf("insertUserCredentials0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachUserCredentials0(ctx context.Context, exec bob.Executor, count int, credentials1 CredentialSlice, user0 *User) (CredentialSlice, error) {
+	setter := &CredentialSetter{
+		UserID: omit.From(user0.ID),
+	}
+
+	err := credentials1.UpdateAll(ctx, exec, *setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachUserCredentials0: %w", err)
+	}
+
+	return credentials1, nil
+}
+
+func (user0 *User) InsertCredentials(ctx context.Context, exec bob.Executor, related ...*CredentialSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+
+	credentials1, err := insertUserCredentials0(ctx, exec, related, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.Credentials = append(user0.R.Credentials, credentials1...)
+
+	for _, rel := range credentials1 {
+		rel.R.User = user0
+	}
+	return nil
+}
+
+func (user0 *User) AttachCredentials(ctx context.Context, exec bob.Executor, related ...*Credential) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	credentials1 := CredentialSlice(related)
+
+	_, err = attachUserCredentials0(ctx, exec, len(related), credentials1, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.Credentials = append(user0.R.Credentials, credentials1...)
+
+	for _, rel := range related {
+		rel.R.User = user0
+	}
+
+	return nil
+}
+
+func insertUserFiles0(ctx context.Context, exec bob.Executor, files1 []*FileSetter, user0 *User) (FileSlice, error) {
+	for i := range files1 {
+		files1[i].UserID = omit.From(user0.ID)
+	}
+
+	ret, err := Files.Insert(bob.ToMods(files1...)).All(ctx, exec)
+	if err != nil {
+		return ret, fmt.Errorf("insertUserFiles0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachUserFiles0(ctx context.Context, exec bob.Executor, count int, files1 FileSlice, user0 *User) (FileSlice, error) {
+	setter := &FileSetter{
+		UserID: omit.From(user0.ID),
+	}
+
+	err := files1.UpdateAll(ctx, exec, *setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachUserFiles0: %w", err)
+	}
+
+	return files1, nil
+}
+
+func (user0 *User) InsertFiles(ctx context.Context, exec bob.Executor, related ...*FileSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+
+	files1, err := insertUserFiles0(ctx, exec, related, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.Files = append(user0.R.Files, files1...)
+
+	for _, rel := range files1 {
+		rel.R.User = user0
+	}
+	return nil
+}
+
+func (user0 *User) AttachFiles(ctx context.Context, exec bob.Executor, related ...*File) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	files1 := FileSlice(related)
+
+	_, err = attachUserFiles0(ctx, exec, len(related), files1, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.Files = append(user0.R.Files, files1...)
+
+	for _, rel := range related {
+		rel.R.User = user0
+	}
+
+	return nil
+}
+
+func insertUserItems0(ctx context.Context, exec bob.Executor, items1 []*ItemSetter, user0 *User) (ItemSlice, error) {
+	for i := range items1 {
+		items1[i].UserID = omit.From(user0.ID)
+	}
+
+	ret, err := Items.Insert(bob.ToMods(items1...)).All(ctx, exec)
+	if err != nil {
+		return ret, fmt.Errorf("insertUserItems0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachUserItems0(ctx context.Context, exec bob.Executor, count int, items1 ItemSlice, user0 *User) (ItemSlice, error) {
+	setter := &ItemSetter{
+		UserID: omit.From(user0.ID),
+	}
+
+	err := items1.UpdateAll(ctx, exec, *setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachUserItems0: %w", err)
+	}
+
+	return items1, nil
+}
+
+func (user0 *User) InsertItems(ctx context.Context, exec bob.Executor, related ...*ItemSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+
+	items1, err := insertUserItems0(ctx, exec, related, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.Items = append(user0.R.Items, items1...)
+
+	for _, rel := range items1 {
+		rel.R.User = user0
+	}
+	return nil
+}
+
+func (user0 *User) AttachItems(ctx context.Context, exec bob.Executor, related ...*Item) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	items1 := ItemSlice(related)
+
+	_, err = attachUserItems0(ctx, exec, len(related), items1, user0)
+	if err != nil {
+		return err
+	}
+
+	user0.R.Items = append(user0.R.Items, items1...)
+
+	for _, rel := range related {
+		rel.R.User = user0
+	}
+
+	return nil
+}
+
+func attachUserProfilePictureFile0(ctx context.Context, exec bob.Executor, count int, user0 *User, file1 *File) (*User, error) {
+	setter := &UserSetter{
+		ProfilePictureID: omitnull.From(file1.ID),
+	}
+
+	err := user0.Update(ctx, exec, setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachUserProfilePictureFile0: %w", err)
+	}
+
+	return user0, nil
+}
+
+func (user0 *User) InsertProfilePictureFile(ctx context.Context, exec bob.Executor, related *FileSetter) error {
+	file1, err := Files.Insert(related).One(ctx, exec)
+	if err != nil {
+		return fmt.Errorf("inserting related objects: %w", err)
+	}
+
+	_, err = attachUserProfilePictureFile0(ctx, exec, 1, user0, file1)
+	if err != nil {
+		return err
+	}
+
+	user0.R.ProfilePictureFile = file1
+
+	file1.R.ProfilePictureUsers = append(file1.R.ProfilePictureUsers, user0)
+
+	return nil
+}
+
+func (user0 *User) AttachProfilePictureFile(ctx context.Context, exec bob.Executor, file1 *File) error {
+	var err error
+
+	_, err = attachUserProfilePictureFile0(ctx, exec, 1, user0, file1)
+	if err != nil {
+		return err
+	}
+
+	user0.R.ProfilePictureFile = file1
+
+	file1.R.ProfilePictureUsers = append(file1.R.ProfilePictureUsers, user0)
+
+	return nil
+}
+
+type userWhere[Q sqlite.Filterable] struct {
+	ID               sqlite.WhereMod[Q, int32]
+	Username         sqlite.WhereMod[Q, string]
+	Password         sqlite.WhereMod[Q, string]
+	ProfilePictureID sqlite.WhereNullMod[Q, int32]
+	WebauthnID       sqlite.WhereMod[Q, string]
+}
+
+func (userWhere[Q]) AliasedAs(alias string) userWhere[Q] {
+	return buildUserWhere[Q](buildUserColumns(alias))
+}
+
+func buildUserWhere[Q sqlite.Filterable](cols userColumns) userWhere[Q] {
+	return userWhere[Q]{
+		ID:               sqlite.Where[Q, int32](cols.ID),
+		Username:         sqlite.Where[Q, string](cols.Username),
+		Password:         sqlite.Where[Q, string](cols.Password),
+		ProfilePictureID: sqlite.WhereNull[Q, int32](cols.ProfilePictureID),
+		WebauthnID:       sqlite.Where[Q, string](cols.WebauthnID),
+	}
 }
 
 func (o *User) Preload(name string, retrieved any) error {
@@ -706,21 +863,17 @@ type userPreloader struct {
 func buildUserPreloader() userPreloader {
 	return userPreloader{
 		ProfilePictureFile: func(opts ...sqlite.PreloadOption) sqlite.Preloader {
-			return sqlite.Preload[*File, FileSlice](orm.Relationship{
+			return sqlite.Preload[*File, FileSlice](sqlite.PreloadRel{
 				Name: "ProfilePictureFile",
-				Sides: []orm.RelSide{
+				Sides: []sqlite.PreloadSide{
 					{
-						From: TableNames.Users,
-						To:   TableNames.Files,
-						FromColumns: []string{
-							ColumnNames.Users.ProfilePictureID,
-						},
-						ToColumns: []string{
-							ColumnNames.Files.ID,
-						},
+						From:        Users,
+						To:          Files,
+						FromColumns: []string{"profile_picture_id"},
+						ToColumns:   []string{"id"},
 					},
 				},
-			}, Files.Columns().Names(), opts...)
+			}, Files.Columns.Names(), opts...)
 		},
 	}
 }
@@ -1012,252 +1165,76 @@ func (os UserSlice) LoadProfilePictureFile(ctx context.Context, exec bob.Executo
 	return nil
 }
 
-func insertUserCredentials0(ctx context.Context, exec bob.Executor, credentials1 []*CredentialSetter, user0 *User) (CredentialSlice, error) {
-	for i := range credentials1 {
-		credentials1[i].UserID = omit.From(user0.ID)
-	}
-
-	ret, err := Credentials.Insert(bob.ToMods(credentials1...)).All(ctx, exec)
-	if err != nil {
-		return ret, fmt.Errorf("insertUserCredentials0: %w", err)
-	}
-
-	return ret, nil
+type userJoins[Q dialect.Joinable] struct {
+	typ                string
+	Credentials        modAs[Q, credentialColumns]
+	Files              modAs[Q, fileColumns]
+	Items              modAs[Q, itemColumns]
+	ProfilePictureFile modAs[Q, fileColumns]
 }
 
-func attachUserCredentials0(ctx context.Context, exec bob.Executor, count int, credentials1 CredentialSlice, user0 *User) (CredentialSlice, error) {
-	setter := &CredentialSetter{
-		UserID: omit.From(user0.ID),
-	}
-
-	err := credentials1.UpdateAll(ctx, exec, *setter)
-	if err != nil {
-		return nil, fmt.Errorf("attachUserCredentials0: %w", err)
-	}
-
-	return credentials1, nil
+func (j userJoins[Q]) aliasedAs(alias string) userJoins[Q] {
+	return buildUserJoins[Q](buildUserColumns(alias), j.typ)
 }
 
-func (user0 *User) InsertCredentials(ctx context.Context, exec bob.Executor, related ...*CredentialSetter) error {
-	if len(related) == 0 {
-		return nil
+func buildUserJoins[Q dialect.Joinable](cols userColumns, typ string) userJoins[Q] {
+	return userJoins[Q]{
+		typ: typ,
+		Credentials: modAs[Q, credentialColumns]{
+			c: Credentials.Columns,
+			f: func(to credentialColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Credentials.Name().As(to.Alias())).On(
+						to.UserID.EQ(cols.ID),
+					))
+				}
+
+				return mods
+			},
+		},
+		Files: modAs[Q, fileColumns]{
+			c: Files.Columns,
+			f: func(to fileColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Files.Name().As(to.Alias())).On(
+						to.UserID.EQ(cols.ID),
+					))
+				}
+
+				return mods
+			},
+		},
+		Items: modAs[Q, itemColumns]{
+			c: Items.Columns,
+			f: func(to itemColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Items.Name().As(to.Alias())).On(
+						to.UserID.EQ(cols.ID),
+					))
+				}
+
+				return mods
+			},
+		},
+		ProfilePictureFile: modAs[Q, fileColumns]{
+			c: Files.Columns,
+			f: func(to fileColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Files.Name().As(to.Alias())).On(
+						to.ID.EQ(cols.ProfilePictureID),
+					))
+				}
+
+				return mods
+			},
+		},
 	}
-
-	var err error
-
-	credentials1, err := insertUserCredentials0(ctx, exec, related, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.Credentials = append(user0.R.Credentials, credentials1...)
-
-	for _, rel := range credentials1 {
-		rel.R.User = user0
-	}
-	return nil
-}
-
-func (user0 *User) AttachCredentials(ctx context.Context, exec bob.Executor, related ...*Credential) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	credentials1 := CredentialSlice(related)
-
-	_, err = attachUserCredentials0(ctx, exec, len(related), credentials1, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.Credentials = append(user0.R.Credentials, credentials1...)
-
-	for _, rel := range related {
-		rel.R.User = user0
-	}
-
-	return nil
-}
-
-func insertUserFiles0(ctx context.Context, exec bob.Executor, files1 []*FileSetter, user0 *User) (FileSlice, error) {
-	for i := range files1 {
-		files1[i].UserID = omit.From(user0.ID)
-	}
-
-	ret, err := Files.Insert(bob.ToMods(files1...)).All(ctx, exec)
-	if err != nil {
-		return ret, fmt.Errorf("insertUserFiles0: %w", err)
-	}
-
-	return ret, nil
-}
-
-func attachUserFiles0(ctx context.Context, exec bob.Executor, count int, files1 FileSlice, user0 *User) (FileSlice, error) {
-	setter := &FileSetter{
-		UserID: omit.From(user0.ID),
-	}
-
-	err := files1.UpdateAll(ctx, exec, *setter)
-	if err != nil {
-		return nil, fmt.Errorf("attachUserFiles0: %w", err)
-	}
-
-	return files1, nil
-}
-
-func (user0 *User) InsertFiles(ctx context.Context, exec bob.Executor, related ...*FileSetter) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-
-	files1, err := insertUserFiles0(ctx, exec, related, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.Files = append(user0.R.Files, files1...)
-
-	for _, rel := range files1 {
-		rel.R.User = user0
-	}
-	return nil
-}
-
-func (user0 *User) AttachFiles(ctx context.Context, exec bob.Executor, related ...*File) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	files1 := FileSlice(related)
-
-	_, err = attachUserFiles0(ctx, exec, len(related), files1, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.Files = append(user0.R.Files, files1...)
-
-	for _, rel := range related {
-		rel.R.User = user0
-	}
-
-	return nil
-}
-
-func insertUserItems0(ctx context.Context, exec bob.Executor, items1 []*ItemSetter, user0 *User) (ItemSlice, error) {
-	for i := range items1 {
-		items1[i].UserID = omit.From(user0.ID)
-	}
-
-	ret, err := Items.Insert(bob.ToMods(items1...)).All(ctx, exec)
-	if err != nil {
-		return ret, fmt.Errorf("insertUserItems0: %w", err)
-	}
-
-	return ret, nil
-}
-
-func attachUserItems0(ctx context.Context, exec bob.Executor, count int, items1 ItemSlice, user0 *User) (ItemSlice, error) {
-	setter := &ItemSetter{
-		UserID: omit.From(user0.ID),
-	}
-
-	err := items1.UpdateAll(ctx, exec, *setter)
-	if err != nil {
-		return nil, fmt.Errorf("attachUserItems0: %w", err)
-	}
-
-	return items1, nil
-}
-
-func (user0 *User) InsertItems(ctx context.Context, exec bob.Executor, related ...*ItemSetter) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-
-	items1, err := insertUserItems0(ctx, exec, related, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.Items = append(user0.R.Items, items1...)
-
-	for _, rel := range items1 {
-		rel.R.User = user0
-	}
-	return nil
-}
-
-func (user0 *User) AttachItems(ctx context.Context, exec bob.Executor, related ...*Item) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	items1 := ItemSlice(related)
-
-	_, err = attachUserItems0(ctx, exec, len(related), items1, user0)
-	if err != nil {
-		return err
-	}
-
-	user0.R.Items = append(user0.R.Items, items1...)
-
-	for _, rel := range related {
-		rel.R.User = user0
-	}
-
-	return nil
-}
-
-func attachUserProfilePictureFile0(ctx context.Context, exec bob.Executor, count int, user0 *User, file1 *File) (*User, error) {
-	setter := &UserSetter{
-		ProfilePictureID: omitnull.From(file1.ID),
-	}
-
-	err := user0.Update(ctx, exec, setter)
-	if err != nil {
-		return nil, fmt.Errorf("attachUserProfilePictureFile0: %w", err)
-	}
-
-	return user0, nil
-}
-
-func (user0 *User) InsertProfilePictureFile(ctx context.Context, exec bob.Executor, related *FileSetter) error {
-	file1, err := Files.Insert(related).One(ctx, exec)
-	if err != nil {
-		return fmt.Errorf("inserting related objects: %w", err)
-	}
-
-	_, err = attachUserProfilePictureFile0(ctx, exec, 1, user0, file1)
-	if err != nil {
-		return err
-	}
-
-	user0.R.ProfilePictureFile = file1
-
-	file1.R.ProfilePictureUsers = append(file1.R.ProfilePictureUsers, user0)
-
-	return nil
-}
-
-func (user0 *User) AttachProfilePictureFile(ctx context.Context, exec bob.Executor, file1 *File) error {
-	var err error
-
-	_, err = attachUserProfilePictureFile0(ctx, exec, 1, user0, file1)
-	if err != nil {
-		return err
-	}
-
-	user0.R.ProfilePictureFile = file1
-
-	file1.R.ProfilePictureUsers = append(file1.R.ProfilePictureUsers, user0)
-
-	return nil
 }

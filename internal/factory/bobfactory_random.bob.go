@@ -46,9 +46,14 @@ func random_float32(f *faker.Faker, limits ...string) float32 {
 		scale, _ = strconv.ParseInt(limits[1], 10, 32)
 	}
 
+	baseVal := f.Float64(10, -1, 1)
+	for baseVal == -1 || baseVal == 0 || baseVal == 1 {
+		baseVal = f.Float64(10, -1, 1)
+	}
+
 	scaleFloat := math.Pow10(int(scale))
 
-	val := f.Float64(10, -1, 1) * math.Pow10(int(precision))
+	val := baseVal * math.Pow10(int(precision))
 	val = math.Trunc(val) / scaleFloat
 
 	return float32(val)

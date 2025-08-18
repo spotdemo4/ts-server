@@ -46,7 +46,7 @@ type Credential struct {
 type CredentialSlice []*Credential
 
 // Credentials contains methods to work with the credential table
-var Credentials = sqlite.NewTablex[*Credential, CredentialSlice, *CredentialSetter]("", "credential")
+var Credentials = sqlite.NewTablex[*Credential, CredentialSlice, *CredentialSetter]("", "credential", buildCredentialColumns("credential"))
 
 // CredentialsQuery is a query on the credential table
 type CredentialsQuery = *sqlite.ViewQuery[*Credential, CredentialSlice]
@@ -56,24 +56,29 @@ type credentialR struct {
 	User *User // fk_credential_0
 }
 
-type credentialColumnNames struct {
-	CredID                string
-	CredPublicKey         string
-	SignCount             string
-	Transports            string
-	UserVerified          string
-	BackupEligible        string
-	BackupState           string
-	AttestationObject     string
-	AttestationClientData string
-	CreatedAt             string
-	LastUsed              string
-	UserID                string
+func buildCredentialColumns(alias string) credentialColumns {
+	return credentialColumns{
+		ColumnsExpr: expr.NewColumnsExpr(
+			"cred_id", "cred_public_key", "sign_count", "transports", "user_verified", "backup_eligible", "backup_state", "attestation_object", "attestation_client_data", "created_at", "last_used", "user_id",
+		).WithParent("credential"),
+		tableAlias:            alias,
+		CredID:                sqlite.Quote(alias, "cred_id"),
+		CredPublicKey:         sqlite.Quote(alias, "cred_public_key"),
+		SignCount:             sqlite.Quote(alias, "sign_count"),
+		Transports:            sqlite.Quote(alias, "transports"),
+		UserVerified:          sqlite.Quote(alias, "user_verified"),
+		BackupEligible:        sqlite.Quote(alias, "backup_eligible"),
+		BackupState:           sqlite.Quote(alias, "backup_state"),
+		AttestationObject:     sqlite.Quote(alias, "attestation_object"),
+		AttestationClientData: sqlite.Quote(alias, "attestation_client_data"),
+		CreatedAt:             sqlite.Quote(alias, "created_at"),
+		LastUsed:              sqlite.Quote(alias, "last_used"),
+		UserID:                sqlite.Quote(alias, "user_id"),
+	}
 }
 
-var CredentialColumns = buildCredentialColumns("credential")
-
 type credentialColumns struct {
+	expr.ColumnsExpr
 	tableAlias            string
 	CredID                sqlite.Expression
 	CredPublicKey         sqlite.Expression
@@ -95,73 +100,6 @@ func (c credentialColumns) Alias() string {
 
 func (credentialColumns) AliasedAs(alias string) credentialColumns {
 	return buildCredentialColumns(alias)
-}
-
-func buildCredentialColumns(alias string) credentialColumns {
-	return credentialColumns{
-		tableAlias:            alias,
-		CredID:                sqlite.Quote(alias, "cred_id"),
-		CredPublicKey:         sqlite.Quote(alias, "cred_public_key"),
-		SignCount:             sqlite.Quote(alias, "sign_count"),
-		Transports:            sqlite.Quote(alias, "transports"),
-		UserVerified:          sqlite.Quote(alias, "user_verified"),
-		BackupEligible:        sqlite.Quote(alias, "backup_eligible"),
-		BackupState:           sqlite.Quote(alias, "backup_state"),
-		AttestationObject:     sqlite.Quote(alias, "attestation_object"),
-		AttestationClientData: sqlite.Quote(alias, "attestation_client_data"),
-		CreatedAt:             sqlite.Quote(alias, "created_at"),
-		LastUsed:              sqlite.Quote(alias, "last_used"),
-		UserID:                sqlite.Quote(alias, "user_id"),
-	}
-}
-
-type credentialWhere[Q sqlite.Filterable] struct {
-	CredID                sqlite.WhereMod[Q, string]
-	CredPublicKey         sqlite.WhereMod[Q, []byte]
-	SignCount             sqlite.WhereMod[Q, int32]
-	Transports            sqlite.WhereNullMod[Q, string]
-	UserVerified          sqlite.WhereNullMod[Q, bool]
-	BackupEligible        sqlite.WhereNullMod[Q, bool]
-	BackupState           sqlite.WhereNullMod[Q, bool]
-	AttestationObject     sqlite.WhereNullMod[Q, []byte]
-	AttestationClientData sqlite.WhereNullMod[Q, []byte]
-	CreatedAt             sqlite.WhereMod[Q, time.Time]
-	LastUsed              sqlite.WhereMod[Q, time.Time]
-	UserID                sqlite.WhereMod[Q, int32]
-}
-
-func (credentialWhere[Q]) AliasedAs(alias string) credentialWhere[Q] {
-	return buildCredentialWhere[Q](buildCredentialColumns(alias))
-}
-
-func buildCredentialWhere[Q sqlite.Filterable](cols credentialColumns) credentialWhere[Q] {
-	return credentialWhere[Q]{
-		CredID:                sqlite.Where[Q, string](cols.CredID),
-		CredPublicKey:         sqlite.Where[Q, []byte](cols.CredPublicKey),
-		SignCount:             sqlite.Where[Q, int32](cols.SignCount),
-		Transports:            sqlite.WhereNull[Q, string](cols.Transports),
-		UserVerified:          sqlite.WhereNull[Q, bool](cols.UserVerified),
-		BackupEligible:        sqlite.WhereNull[Q, bool](cols.BackupEligible),
-		BackupState:           sqlite.WhereNull[Q, bool](cols.BackupState),
-		AttestationObject:     sqlite.WhereNull[Q, []byte](cols.AttestationObject),
-		AttestationClientData: sqlite.WhereNull[Q, []byte](cols.AttestationClientData),
-		CreatedAt:             sqlite.Where[Q, time.Time](cols.CreatedAt),
-		LastUsed:              sqlite.Where[Q, time.Time](cols.LastUsed),
-		UserID:                sqlite.Where[Q, int32](cols.UserID),
-	}
-}
-
-var CredentialErrors = &credentialErrors{
-	ErrUniquePkMainCredential: &UniqueConstraintError{
-		schema:  "",
-		table:   "credential",
-		columns: []string{"cred_id"},
-		s:       "pk_main_credential",
-	},
-}
-
-type credentialErrors struct {
-	ErrUniquePkMainCredential *UniqueConstraintError
 }
 
 // CredentialSetter is used for insert/upsert/update operations
@@ -432,20 +370,20 @@ func (s CredentialSetter) Expressions(prefix ...string) []bob.Expression {
 func FindCredential(ctx context.Context, exec bob.Executor, CredIDPK string, cols ...string) (*Credential, error) {
 	if len(cols) == 0 {
 		return Credentials.Query(
-			SelectWhere.Credentials.CredID.EQ(CredIDPK),
+			sm.Where(Credentials.Columns.CredID.EQ(sqlite.Arg(CredIDPK))),
 		).One(ctx, exec)
 	}
 
 	return Credentials.Query(
-		SelectWhere.Credentials.CredID.EQ(CredIDPK),
-		sm.Columns(Credentials.Columns().Only(cols...)),
+		sm.Where(Credentials.Columns.CredID.EQ(sqlite.Arg(CredIDPK))),
+		sm.Columns(Credentials.Columns.Only(cols...)),
 	).One(ctx, exec)
 }
 
 // CredentialExists checks the presence of a single record by primary key
 func CredentialExists(ctx context.Context, exec bob.Executor, CredIDPK string) (bool, error) {
 	return Credentials.Query(
-		SelectWhere.Credentials.CredID.EQ(CredIDPK),
+		sm.Where(Credentials.Columns.CredID.EQ(sqlite.Arg(CredIDPK))),
 	).Exists(ctx, exec)
 }
 
@@ -500,7 +438,7 @@ func (o *Credential) Delete(ctx context.Context, exec bob.Executor) error {
 // Reload refreshes the Credential using the executor
 func (o *Credential) Reload(ctx context.Context, exec bob.Executor) error {
 	o2, err := Credentials.Query(
-		SelectWhere.Credentials.CredID.EQ(o.CredID),
+		sm.Where(Credentials.Columns.CredID.EQ(sqlite.Arg(o.CredID))),
 	).One(ctx, exec)
 	if err != nil {
 		return err
@@ -650,39 +588,10 @@ func (o CredentialSlice) ReloadAll(ctx context.Context, exec bob.Executor) error
 	return nil
 }
 
-type credentialJoins[Q dialect.Joinable] struct {
-	typ  string
-	User modAs[Q, userColumns]
-}
-
-func (j credentialJoins[Q]) aliasedAs(alias string) credentialJoins[Q] {
-	return buildCredentialJoins[Q](buildCredentialColumns(alias), j.typ)
-}
-
-func buildCredentialJoins[Q dialect.Joinable](cols credentialColumns, typ string) credentialJoins[Q] {
-	return credentialJoins[Q]{
-		typ: typ,
-		User: modAs[Q, userColumns]{
-			c: UserColumns,
-			f: func(to userColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
-						to.ID.EQ(cols.UserID),
-					))
-				}
-
-				return mods
-			},
-		},
-	}
-}
-
 // User starts a query for related objects on user
 func (o *Credential) User(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	return Users.Query(append(mods,
-		sm.Where(UserColumns.ID.EQ(sqlite.Arg(o.UserID))),
+		sm.Where(Users.Columns.ID.EQ(sqlite.Arg(o.UserID))),
 	)...)
 }
 
@@ -694,8 +603,90 @@ func (os CredentialSlice) User(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery
 	PKArgExpr := sqlite.Group(PKArgSlice...)
 
 	return Users.Query(append(mods,
-		sm.Where(sqlite.Group(UserColumns.ID).OP("IN", PKArgExpr)),
+		sm.Where(sqlite.Group(Users.Columns.ID).OP("IN", PKArgExpr)),
 	)...)
+}
+
+func attachCredentialUser0(ctx context.Context, exec bob.Executor, count int, credential0 *Credential, user1 *User) (*Credential, error) {
+	setter := &CredentialSetter{
+		UserID: omit.From(user1.ID),
+	}
+
+	err := credential0.Update(ctx, exec, setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachCredentialUser0: %w", err)
+	}
+
+	return credential0, nil
+}
+
+func (credential0 *Credential) InsertUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
+	user1, err := Users.Insert(related).One(ctx, exec)
+	if err != nil {
+		return fmt.Errorf("inserting related objects: %w", err)
+	}
+
+	_, err = attachCredentialUser0(ctx, exec, 1, credential0, user1)
+	if err != nil {
+		return err
+	}
+
+	credential0.R.User = user1
+
+	user1.R.Credentials = append(user1.R.Credentials, credential0)
+
+	return nil
+}
+
+func (credential0 *Credential) AttachUser(ctx context.Context, exec bob.Executor, user1 *User) error {
+	var err error
+
+	_, err = attachCredentialUser0(ctx, exec, 1, credential0, user1)
+	if err != nil {
+		return err
+	}
+
+	credential0.R.User = user1
+
+	user1.R.Credentials = append(user1.R.Credentials, credential0)
+
+	return nil
+}
+
+type credentialWhere[Q sqlite.Filterable] struct {
+	CredID                sqlite.WhereMod[Q, string]
+	CredPublicKey         sqlite.WhereMod[Q, []byte]
+	SignCount             sqlite.WhereMod[Q, int32]
+	Transports            sqlite.WhereNullMod[Q, string]
+	UserVerified          sqlite.WhereNullMod[Q, bool]
+	BackupEligible        sqlite.WhereNullMod[Q, bool]
+	BackupState           sqlite.WhereNullMod[Q, bool]
+	AttestationObject     sqlite.WhereNullMod[Q, []byte]
+	AttestationClientData sqlite.WhereNullMod[Q, []byte]
+	CreatedAt             sqlite.WhereMod[Q, time.Time]
+	LastUsed              sqlite.WhereMod[Q, time.Time]
+	UserID                sqlite.WhereMod[Q, int32]
+}
+
+func (credentialWhere[Q]) AliasedAs(alias string) credentialWhere[Q] {
+	return buildCredentialWhere[Q](buildCredentialColumns(alias))
+}
+
+func buildCredentialWhere[Q sqlite.Filterable](cols credentialColumns) credentialWhere[Q] {
+	return credentialWhere[Q]{
+		CredID:                sqlite.Where[Q, string](cols.CredID),
+		CredPublicKey:         sqlite.Where[Q, []byte](cols.CredPublicKey),
+		SignCount:             sqlite.Where[Q, int32](cols.SignCount),
+		Transports:            sqlite.WhereNull[Q, string](cols.Transports),
+		UserVerified:          sqlite.WhereNull[Q, bool](cols.UserVerified),
+		BackupEligible:        sqlite.WhereNull[Q, bool](cols.BackupEligible),
+		BackupState:           sqlite.WhereNull[Q, bool](cols.BackupState),
+		AttestationObject:     sqlite.WhereNull[Q, []byte](cols.AttestationObject),
+		AttestationClientData: sqlite.WhereNull[Q, []byte](cols.AttestationClientData),
+		CreatedAt:             sqlite.Where[Q, time.Time](cols.CreatedAt),
+		LastUsed:              sqlite.Where[Q, time.Time](cols.LastUsed),
+		UserID:                sqlite.Where[Q, int32](cols.UserID),
+	}
 }
 
 func (o *Credential) Preload(name string, retrieved any) error {
@@ -728,21 +719,17 @@ type credentialPreloader struct {
 func buildCredentialPreloader() credentialPreloader {
 	return credentialPreloader{
 		User: func(opts ...sqlite.PreloadOption) sqlite.Preloader {
-			return sqlite.Preload[*User, UserSlice](orm.Relationship{
+			return sqlite.Preload[*User, UserSlice](sqlite.PreloadRel{
 				Name: "User",
-				Sides: []orm.RelSide{
+				Sides: []sqlite.PreloadSide{
 					{
-						From: TableNames.Credentials,
-						To:   TableNames.Users,
-						FromColumns: []string{
-							ColumnNames.Credentials.UserID,
-						},
-						ToColumns: []string{
-							ColumnNames.Users.ID,
-						},
+						From:        Credentials,
+						To:          Users,
+						FromColumns: []string{"user_id"},
+						ToColumns:   []string{"id"},
 					},
 				},
-			}, Users.Columns().Names(), opts...)
+			}, Users.Columns.Names(), opts...)
 		},
 	}
 }
@@ -818,48 +805,31 @@ func (os CredentialSlice) LoadUser(ctx context.Context, exec bob.Executor, mods 
 	return nil
 }
 
-func attachCredentialUser0(ctx context.Context, exec bob.Executor, count int, credential0 *Credential, user1 *User) (*Credential, error) {
-	setter := &CredentialSetter{
-		UserID: omit.From(user1.ID),
-	}
-
-	err := credential0.Update(ctx, exec, setter)
-	if err != nil {
-		return nil, fmt.Errorf("attachCredentialUser0: %w", err)
-	}
-
-	return credential0, nil
+type credentialJoins[Q dialect.Joinable] struct {
+	typ  string
+	User modAs[Q, userColumns]
 }
 
-func (credential0 *Credential) InsertUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
-	user1, err := Users.Insert(related).One(ctx, exec)
-	if err != nil {
-		return fmt.Errorf("inserting related objects: %w", err)
-	}
-
-	_, err = attachCredentialUser0(ctx, exec, 1, credential0, user1)
-	if err != nil {
-		return err
-	}
-
-	credential0.R.User = user1
-
-	user1.R.Credentials = append(user1.R.Credentials, credential0)
-
-	return nil
+func (j credentialJoins[Q]) aliasedAs(alias string) credentialJoins[Q] {
+	return buildCredentialJoins[Q](buildCredentialColumns(alias), j.typ)
 }
 
-func (credential0 *Credential) AttachUser(ctx context.Context, exec bob.Executor, user1 *User) error {
-	var err error
+func buildCredentialJoins[Q dialect.Joinable](cols credentialColumns, typ string) credentialJoins[Q] {
+	return credentialJoins[Q]{
+		typ: typ,
+		User: modAs[Q, userColumns]{
+			c: Users.Columns,
+			f: func(to userColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
 
-	_, err = attachCredentialUser0(ctx, exec, 1, credential0, user1)
-	if err != nil {
-		return err
+				{
+					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
+						to.ID.EQ(cols.UserID),
+					))
+				}
+
+				return mods
+			},
+		},
 	}
-
-	credential0.R.User = user1
-
-	user1.R.Credentials = append(user1.R.Credentials, credential0)
-
-	return nil
 }

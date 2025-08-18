@@ -27,18 +27,23 @@ type SchemaMigration struct {
 type SchemaMigrationSlice []*SchemaMigration
 
 // SchemaMigrations contains methods to work with the schema_migrations table
-var SchemaMigrations = sqlite.NewTablex[*SchemaMigration, SchemaMigrationSlice, *SchemaMigrationSetter]("", "schema_migrations")
+var SchemaMigrations = sqlite.NewTablex[*SchemaMigration, SchemaMigrationSlice, *SchemaMigrationSetter]("", "schema_migrations", buildSchemaMigrationColumns("schema_migrations"))
 
 // SchemaMigrationsQuery is a query on the schema_migrations table
 type SchemaMigrationsQuery = *sqlite.ViewQuery[*SchemaMigration, SchemaMigrationSlice]
 
-type schemaMigrationColumnNames struct {
-	Version string
+func buildSchemaMigrationColumns(alias string) schemaMigrationColumns {
+	return schemaMigrationColumns{
+		ColumnsExpr: expr.NewColumnsExpr(
+			"version",
+		).WithParent("schema_migrations"),
+		tableAlias: alias,
+		Version:    sqlite.Quote(alias, "version"),
+	}
 }
 
-var SchemaMigrationColumns = buildSchemaMigrationColumns("schema_migrations")
-
 type schemaMigrationColumns struct {
+	expr.ColumnsExpr
 	tableAlias string
 	Version    sqlite.Expression
 }
@@ -49,40 +54,6 @@ func (c schemaMigrationColumns) Alias() string {
 
 func (schemaMigrationColumns) AliasedAs(alias string) schemaMigrationColumns {
 	return buildSchemaMigrationColumns(alias)
-}
-
-func buildSchemaMigrationColumns(alias string) schemaMigrationColumns {
-	return schemaMigrationColumns{
-		tableAlias: alias,
-		Version:    sqlite.Quote(alias, "version"),
-	}
-}
-
-type schemaMigrationWhere[Q sqlite.Filterable] struct {
-	Version sqlite.WhereMod[Q, string]
-}
-
-func (schemaMigrationWhere[Q]) AliasedAs(alias string) schemaMigrationWhere[Q] {
-	return buildSchemaMigrationWhere[Q](buildSchemaMigrationColumns(alias))
-}
-
-func buildSchemaMigrationWhere[Q sqlite.Filterable](cols schemaMigrationColumns) schemaMigrationWhere[Q] {
-	return schemaMigrationWhere[Q]{
-		Version: sqlite.Where[Q, string](cols.Version),
-	}
-}
-
-var SchemaMigrationErrors = &schemaMigrationErrors{
-	ErrUniquePkMainSchemaMigrations: &UniqueConstraintError{
-		schema:  "",
-		table:   "schema_migrations",
-		columns: []string{"version"},
-		s:       "pk_main_schema_migrations",
-	},
-}
-
-type schemaMigrationErrors struct {
-	ErrUniquePkMainSchemaMigrations *UniqueConstraintError
 }
 
 // SchemaMigrationSetter is used for insert/upsert/update operations
@@ -155,20 +126,20 @@ func (s SchemaMigrationSetter) Expressions(prefix ...string) []bob.Expression {
 func FindSchemaMigration(ctx context.Context, exec bob.Executor, VersionPK string, cols ...string) (*SchemaMigration, error) {
 	if len(cols) == 0 {
 		return SchemaMigrations.Query(
-			SelectWhere.SchemaMigrations.Version.EQ(VersionPK),
+			sm.Where(SchemaMigrations.Columns.Version.EQ(sqlite.Arg(VersionPK))),
 		).One(ctx, exec)
 	}
 
 	return SchemaMigrations.Query(
-		SelectWhere.SchemaMigrations.Version.EQ(VersionPK),
-		sm.Columns(SchemaMigrations.Columns().Only(cols...)),
+		sm.Where(SchemaMigrations.Columns.Version.EQ(sqlite.Arg(VersionPK))),
+		sm.Columns(SchemaMigrations.Columns.Only(cols...)),
 	).One(ctx, exec)
 }
 
 // SchemaMigrationExists checks the presence of a single record by primary key
 func SchemaMigrationExists(ctx context.Context, exec bob.Executor, VersionPK string) (bool, error) {
 	return SchemaMigrations.Query(
-		SelectWhere.SchemaMigrations.Version.EQ(VersionPK),
+		sm.Where(SchemaMigrations.Columns.Version.EQ(sqlite.Arg(VersionPK))),
 	).Exists(ctx, exec)
 }
 
@@ -222,7 +193,7 @@ func (o *SchemaMigration) Delete(ctx context.Context, exec bob.Executor) error {
 // Reload refreshes the SchemaMigration using the executor
 func (o *SchemaMigration) Reload(ctx context.Context, exec bob.Executor) error {
 	o2, err := SchemaMigrations.Query(
-		SelectWhere.SchemaMigrations.Version.EQ(o.Version),
+		sm.Where(SchemaMigrations.Columns.Version.EQ(sqlite.Arg(o.Version))),
 	).One(ctx, exec)
 	if err != nil {
 		return err
@@ -370,4 +341,18 @@ func (o SchemaMigrationSlice) ReloadAll(ctx context.Context, exec bob.Executor) 
 	o.copyMatchingRows(o2...)
 
 	return nil
+}
+
+type schemaMigrationWhere[Q sqlite.Filterable] struct {
+	Version sqlite.WhereMod[Q, string]
+}
+
+func (schemaMigrationWhere[Q]) AliasedAs(alias string) schemaMigrationWhere[Q] {
+	return buildSchemaMigrationWhere[Q](buildSchemaMigrationColumns(alias))
+}
+
+func buildSchemaMigrationWhere[Q sqlite.Filterable](cols schemaMigrationColumns) schemaMigrationWhere[Q] {
+	return schemaMigrationWhere[Q]{
+		Version: sqlite.Where[Q, string](cols.Version),
+	}
 }

@@ -36,7 +36,7 @@ type File struct {
 type FileSlice []*File
 
 // Files contains methods to work with the file table
-var Files = sqlite.NewTablex[*File, FileSlice, *FileSetter]("", "file")
+var Files = sqlite.NewTablex[*File, FileSlice, *FileSetter]("", "file", buildFileColumns("file"))
 
 // FilesQuery is a query on the file table
 type FilesQuery = *sqlite.ViewQuery[*File, FileSlice]
@@ -47,16 +47,21 @@ type fileR struct {
 	ProfilePictureUsers UserSlice // fk_user_0
 }
 
-type fileColumnNames struct {
-	ID     string
-	Name   string
-	Data   string
-	UserID string
+func buildFileColumns(alias string) fileColumns {
+	return fileColumns{
+		ColumnsExpr: expr.NewColumnsExpr(
+			"id", "name", "data", "user_id",
+		).WithParent("file"),
+		tableAlias: alias,
+		ID:         sqlite.Quote(alias, "id"),
+		Name:       sqlite.Quote(alias, "name"),
+		Data:       sqlite.Quote(alias, "data"),
+		UserID:     sqlite.Quote(alias, "user_id"),
+	}
 }
 
-var FileColumns = buildFileColumns("file")
-
 type fileColumns struct {
+	expr.ColumnsExpr
 	tableAlias string
 	ID         sqlite.Expression
 	Name       sqlite.Expression
@@ -70,49 +75,6 @@ func (c fileColumns) Alias() string {
 
 func (fileColumns) AliasedAs(alias string) fileColumns {
 	return buildFileColumns(alias)
-}
-
-func buildFileColumns(alias string) fileColumns {
-	return fileColumns{
-		tableAlias: alias,
-		ID:         sqlite.Quote(alias, "id"),
-		Name:       sqlite.Quote(alias, "name"),
-		Data:       sqlite.Quote(alias, "data"),
-		UserID:     sqlite.Quote(alias, "user_id"),
-	}
-}
-
-type fileWhere[Q sqlite.Filterable] struct {
-	ID     sqlite.WhereMod[Q, int32]
-	Name   sqlite.WhereMod[Q, string]
-	Data   sqlite.WhereMod[Q, []byte]
-	UserID sqlite.WhereMod[Q, int32]
-}
-
-func (fileWhere[Q]) AliasedAs(alias string) fileWhere[Q] {
-	return buildFileWhere[Q](buildFileColumns(alias))
-}
-
-func buildFileWhere[Q sqlite.Filterable](cols fileColumns) fileWhere[Q] {
-	return fileWhere[Q]{
-		ID:     sqlite.Where[Q, int32](cols.ID),
-		Name:   sqlite.Where[Q, string](cols.Name),
-		Data:   sqlite.Where[Q, []byte](cols.Data),
-		UserID: sqlite.Where[Q, int32](cols.UserID),
-	}
-}
-
-var FileErrors = &fileErrors{
-	ErrUniquePkMainFile: &UniqueConstraintError{
-		schema:  "",
-		table:   "file",
-		columns: []string{"id"},
-		s:       "pk_main_file",
-	},
-}
-
-type fileErrors struct {
-	ErrUniquePkMainFile *UniqueConstraintError
 }
 
 // FileSetter is used for insert/upsert/update operations
@@ -239,20 +201,20 @@ func (s FileSetter) Expressions(prefix ...string) []bob.Expression {
 func FindFile(ctx context.Context, exec bob.Executor, IDPK int32, cols ...string) (*File, error) {
 	if len(cols) == 0 {
 		return Files.Query(
-			SelectWhere.Files.ID.EQ(IDPK),
+			sm.Where(Files.Columns.ID.EQ(sqlite.Arg(IDPK))),
 		).One(ctx, exec)
 	}
 
 	return Files.Query(
-		SelectWhere.Files.ID.EQ(IDPK),
-		sm.Columns(Files.Columns().Only(cols...)),
+		sm.Where(Files.Columns.ID.EQ(sqlite.Arg(IDPK))),
+		sm.Columns(Files.Columns.Only(cols...)),
 	).One(ctx, exec)
 }
 
 // FileExists checks the presence of a single record by primary key
 func FileExists(ctx context.Context, exec bob.Executor, IDPK int32) (bool, error) {
 	return Files.Query(
-		SelectWhere.Files.ID.EQ(IDPK),
+		sm.Where(Files.Columns.ID.EQ(sqlite.Arg(IDPK))),
 	).Exists(ctx, exec)
 }
 
@@ -307,7 +269,7 @@ func (o *File) Delete(ctx context.Context, exec bob.Executor) error {
 // Reload refreshes the File using the executor
 func (o *File) Reload(ctx context.Context, exec bob.Executor) error {
 	o2, err := Files.Query(
-		SelectWhere.Files.ID.EQ(o.ID),
+		sm.Where(Files.Columns.ID.EQ(sqlite.Arg(o.ID))),
 	).One(ctx, exec)
 	if err != nil {
 		return err
@@ -457,54 +419,10 @@ func (o FileSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
-type fileJoins[Q dialect.Joinable] struct {
-	typ                 string
-	User                modAs[Q, userColumns]
-	ProfilePictureUsers modAs[Q, userColumns]
-}
-
-func (j fileJoins[Q]) aliasedAs(alias string) fileJoins[Q] {
-	return buildFileJoins[Q](buildFileColumns(alias), j.typ)
-}
-
-func buildFileJoins[Q dialect.Joinable](cols fileColumns, typ string) fileJoins[Q] {
-	return fileJoins[Q]{
-		typ: typ,
-		User: modAs[Q, userColumns]{
-			c: UserColumns,
-			f: func(to userColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
-						to.ID.EQ(cols.UserID),
-					))
-				}
-
-				return mods
-			},
-		},
-		ProfilePictureUsers: modAs[Q, userColumns]{
-			c: UserColumns,
-			f: func(to userColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
-						to.ProfilePictureID.EQ(cols.ID),
-					))
-				}
-
-				return mods
-			},
-		},
-	}
-}
-
 // User starts a query for related objects on user
 func (o *File) User(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	return Users.Query(append(mods,
-		sm.Where(UserColumns.ID.EQ(sqlite.Arg(o.UserID))),
+		sm.Where(Users.Columns.ID.EQ(sqlite.Arg(o.UserID))),
 	)...)
 }
 
@@ -516,14 +434,14 @@ func (os FileSlice) User(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	PKArgExpr := sqlite.Group(PKArgSlice...)
 
 	return Users.Query(append(mods,
-		sm.Where(sqlite.Group(UserColumns.ID).OP("IN", PKArgExpr)),
+		sm.Where(sqlite.Group(Users.Columns.ID).OP("IN", PKArgExpr)),
 	)...)
 }
 
 // ProfilePictureUsers starts a query for related objects on user
 func (o *File) ProfilePictureUsers(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	return Users.Query(append(mods,
-		sm.Where(UserColumns.ProfilePictureID.EQ(sqlite.Arg(o.ID))),
+		sm.Where(Users.Columns.ProfilePictureID.EQ(sqlite.Arg(o.ID))),
 	)...)
 }
 
@@ -535,8 +453,142 @@ func (os FileSlice) ProfilePictureUsers(mods ...bob.Mod[*dialect.SelectQuery]) U
 	PKArgExpr := sqlite.Group(PKArgSlice...)
 
 	return Users.Query(append(mods,
-		sm.Where(sqlite.Group(UserColumns.ProfilePictureID).OP("IN", PKArgExpr)),
+		sm.Where(sqlite.Group(Users.Columns.ProfilePictureID).OP("IN", PKArgExpr)),
 	)...)
+}
+
+func attachFileUser0(ctx context.Context, exec bob.Executor, count int, file0 *File, user1 *User) (*File, error) {
+	setter := &FileSetter{
+		UserID: omit.From(user1.ID),
+	}
+
+	err := file0.Update(ctx, exec, setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachFileUser0: %w", err)
+	}
+
+	return file0, nil
+}
+
+func (file0 *File) InsertUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
+	user1, err := Users.Insert(related).One(ctx, exec)
+	if err != nil {
+		return fmt.Errorf("inserting related objects: %w", err)
+	}
+
+	_, err = attachFileUser0(ctx, exec, 1, file0, user1)
+	if err != nil {
+		return err
+	}
+
+	file0.R.User = user1
+
+	user1.R.Files = append(user1.R.Files, file0)
+
+	return nil
+}
+
+func (file0 *File) AttachUser(ctx context.Context, exec bob.Executor, user1 *User) error {
+	var err error
+
+	_, err = attachFileUser0(ctx, exec, 1, file0, user1)
+	if err != nil {
+		return err
+	}
+
+	file0.R.User = user1
+
+	user1.R.Files = append(user1.R.Files, file0)
+
+	return nil
+}
+
+func insertFileProfilePictureUsers0(ctx context.Context, exec bob.Executor, users1 []*UserSetter, file0 *File) (UserSlice, error) {
+	for i := range users1 {
+		users1[i].ProfilePictureID = omitnull.From(file0.ID)
+	}
+
+	ret, err := Users.Insert(bob.ToMods(users1...)).All(ctx, exec)
+	if err != nil {
+		return ret, fmt.Errorf("insertFileProfilePictureUsers0: %w", err)
+	}
+
+	return ret, nil
+}
+
+func attachFileProfilePictureUsers0(ctx context.Context, exec bob.Executor, count int, users1 UserSlice, file0 *File) (UserSlice, error) {
+	setter := &UserSetter{
+		ProfilePictureID: omitnull.From(file0.ID),
+	}
+
+	err := users1.UpdateAll(ctx, exec, *setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachFileProfilePictureUsers0: %w", err)
+	}
+
+	return users1, nil
+}
+
+func (file0 *File) InsertProfilePictureUsers(ctx context.Context, exec bob.Executor, related ...*UserSetter) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+
+	users1, err := insertFileProfilePictureUsers0(ctx, exec, related, file0)
+	if err != nil {
+		return err
+	}
+
+	file0.R.ProfilePictureUsers = append(file0.R.ProfilePictureUsers, users1...)
+
+	for _, rel := range users1 {
+		rel.R.ProfilePictureFile = file0
+	}
+	return nil
+}
+
+func (file0 *File) AttachProfilePictureUsers(ctx context.Context, exec bob.Executor, related ...*User) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	users1 := UserSlice(related)
+
+	_, err = attachFileProfilePictureUsers0(ctx, exec, len(related), users1, file0)
+	if err != nil {
+		return err
+	}
+
+	file0.R.ProfilePictureUsers = append(file0.R.ProfilePictureUsers, users1...)
+
+	for _, rel := range related {
+		rel.R.ProfilePictureFile = file0
+	}
+
+	return nil
+}
+
+type fileWhere[Q sqlite.Filterable] struct {
+	ID     sqlite.WhereMod[Q, int32]
+	Name   sqlite.WhereMod[Q, string]
+	Data   sqlite.WhereMod[Q, []byte]
+	UserID sqlite.WhereMod[Q, int32]
+}
+
+func (fileWhere[Q]) AliasedAs(alias string) fileWhere[Q] {
+	return buildFileWhere[Q](buildFileColumns(alias))
+}
+
+func buildFileWhere[Q sqlite.Filterable](cols fileColumns) fileWhere[Q] {
+	return fileWhere[Q]{
+		ID:     sqlite.Where[Q, int32](cols.ID),
+		Name:   sqlite.Where[Q, string](cols.Name),
+		Data:   sqlite.Where[Q, []byte](cols.Data),
+		UserID: sqlite.Where[Q, int32](cols.UserID),
+	}
 }
 
 func (o *File) Preload(name string, retrieved any) error {
@@ -583,21 +635,17 @@ type filePreloader struct {
 func buildFilePreloader() filePreloader {
 	return filePreloader{
 		User: func(opts ...sqlite.PreloadOption) sqlite.Preloader {
-			return sqlite.Preload[*User, UserSlice](orm.Relationship{
+			return sqlite.Preload[*User, UserSlice](sqlite.PreloadRel{
 				Name: "User",
-				Sides: []orm.RelSide{
+				Sides: []sqlite.PreloadSide{
 					{
-						From: TableNames.Files,
-						To:   TableNames.Users,
-						FromColumns: []string{
-							ColumnNames.Files.UserID,
-						},
-						ToColumns: []string{
-							ColumnNames.Users.ID,
-						},
+						From:        Files,
+						To:          Users,
+						FromColumns: []string{"user_id"},
+						ToColumns:   []string{"id"},
 					},
 				},
-			}, Users.Columns().Names(), opts...)
+			}, Users.Columns.Names(), opts...)
 		},
 	}
 }
@@ -747,116 +795,46 @@ func (os FileSlice) LoadProfilePictureUsers(ctx context.Context, exec bob.Execut
 	return nil
 }
 
-func attachFileUser0(ctx context.Context, exec bob.Executor, count int, file0 *File, user1 *User) (*File, error) {
-	setter := &FileSetter{
-		UserID: omit.From(user1.ID),
-	}
-
-	err := file0.Update(ctx, exec, setter)
-	if err != nil {
-		return nil, fmt.Errorf("attachFileUser0: %w", err)
-	}
-
-	return file0, nil
+type fileJoins[Q dialect.Joinable] struct {
+	typ                 string
+	User                modAs[Q, userColumns]
+	ProfilePictureUsers modAs[Q, userColumns]
 }
 
-func (file0 *File) InsertUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
-	user1, err := Users.Insert(related).One(ctx, exec)
-	if err != nil {
-		return fmt.Errorf("inserting related objects: %w", err)
-	}
-
-	_, err = attachFileUser0(ctx, exec, 1, file0, user1)
-	if err != nil {
-		return err
-	}
-
-	file0.R.User = user1
-
-	user1.R.Files = append(user1.R.Files, file0)
-
-	return nil
+func (j fileJoins[Q]) aliasedAs(alias string) fileJoins[Q] {
+	return buildFileJoins[Q](buildFileColumns(alias), j.typ)
 }
 
-func (file0 *File) AttachUser(ctx context.Context, exec bob.Executor, user1 *User) error {
-	var err error
+func buildFileJoins[Q dialect.Joinable](cols fileColumns, typ string) fileJoins[Q] {
+	return fileJoins[Q]{
+		typ: typ,
+		User: modAs[Q, userColumns]{
+			c: Users.Columns,
+			f: func(to userColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
 
-	_, err = attachFileUser0(ctx, exec, 1, file0, user1)
-	if err != nil {
-		return err
+				{
+					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
+						to.ID.EQ(cols.UserID),
+					))
+				}
+
+				return mods
+			},
+		},
+		ProfilePictureUsers: modAs[Q, userColumns]{
+			c: Users.Columns,
+			f: func(to userColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
+
+				{
+					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
+						to.ProfilePictureID.EQ(cols.ID),
+					))
+				}
+
+				return mods
+			},
+		},
 	}
-
-	file0.R.User = user1
-
-	user1.R.Files = append(user1.R.Files, file0)
-
-	return nil
-}
-
-func insertFileProfilePictureUsers0(ctx context.Context, exec bob.Executor, users1 []*UserSetter, file0 *File) (UserSlice, error) {
-	for i := range users1 {
-		users1[i].ProfilePictureID = omitnull.From(file0.ID)
-	}
-
-	ret, err := Users.Insert(bob.ToMods(users1...)).All(ctx, exec)
-	if err != nil {
-		return ret, fmt.Errorf("insertFileProfilePictureUsers0: %w", err)
-	}
-
-	return ret, nil
-}
-
-func attachFileProfilePictureUsers0(ctx context.Context, exec bob.Executor, count int, users1 UserSlice, file0 *File) (UserSlice, error) {
-	setter := &UserSetter{
-		ProfilePictureID: omitnull.From(file0.ID),
-	}
-
-	err := users1.UpdateAll(ctx, exec, *setter)
-	if err != nil {
-		return nil, fmt.Errorf("attachFileProfilePictureUsers0: %w", err)
-	}
-
-	return users1, nil
-}
-
-func (file0 *File) InsertProfilePictureUsers(ctx context.Context, exec bob.Executor, related ...*UserSetter) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-
-	users1, err := insertFileProfilePictureUsers0(ctx, exec, related, file0)
-	if err != nil {
-		return err
-	}
-
-	file0.R.ProfilePictureUsers = append(file0.R.ProfilePictureUsers, users1...)
-
-	for _, rel := range users1 {
-		rel.R.ProfilePictureFile = file0
-	}
-	return nil
-}
-
-func (file0 *File) AttachProfilePictureUsers(ctx context.Context, exec bob.Executor, related ...*User) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	users1 := UserSlice(related)
-
-	_, err = attachFileProfilePictureUsers0(ctx, exec, len(related), users1, file0)
-	if err != nil {
-		return err
-	}
-
-	file0.R.ProfilePictureUsers = append(file0.R.ProfilePictureUsers, users1...)
-
-	for _, rel := range related {
-		rel.R.ProfilePictureFile = file0
-	}
-
-	return nil
 }

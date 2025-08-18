@@ -39,7 +39,7 @@ type Item struct {
 type ItemSlice []*Item
 
 // Items contains methods to work with the item table
-var Items = sqlite.NewTablex[*Item, ItemSlice, *ItemSetter]("", "item")
+var Items = sqlite.NewTablex[*Item, ItemSlice, *ItemSetter]("", "item", buildItemColumns("item"))
 
 // ItemsQuery is a query on the item table
 type ItemsQuery = *sqlite.ViewQuery[*Item, ItemSlice]
@@ -49,19 +49,24 @@ type itemR struct {
 	User *User // fk_item_0
 }
 
-type itemColumnNames struct {
-	ID          string
-	Name        string
-	Added       string
-	Description string
-	Price       string
-	Quantity    string
-	UserID      string
+func buildItemColumns(alias string) itemColumns {
+	return itemColumns{
+		ColumnsExpr: expr.NewColumnsExpr(
+			"id", "name", "added", "description", "price", "quantity", "user_id",
+		).WithParent("item"),
+		tableAlias:  alias,
+		ID:          sqlite.Quote(alias, "id"),
+		Name:        sqlite.Quote(alias, "name"),
+		Added:       sqlite.Quote(alias, "added"),
+		Description: sqlite.Quote(alias, "description"),
+		Price:       sqlite.Quote(alias, "price"),
+		Quantity:    sqlite.Quote(alias, "quantity"),
+		UserID:      sqlite.Quote(alias, "user_id"),
+	}
 }
 
-var ItemColumns = buildItemColumns("item")
-
 type itemColumns struct {
+	expr.ColumnsExpr
 	tableAlias  string
 	ID          sqlite.Expression
 	Name        sqlite.Expression
@@ -78,58 +83,6 @@ func (c itemColumns) Alias() string {
 
 func (itemColumns) AliasedAs(alias string) itemColumns {
 	return buildItemColumns(alias)
-}
-
-func buildItemColumns(alias string) itemColumns {
-	return itemColumns{
-		tableAlias:  alias,
-		ID:          sqlite.Quote(alias, "id"),
-		Name:        sqlite.Quote(alias, "name"),
-		Added:       sqlite.Quote(alias, "added"),
-		Description: sqlite.Quote(alias, "description"),
-		Price:       sqlite.Quote(alias, "price"),
-		Quantity:    sqlite.Quote(alias, "quantity"),
-		UserID:      sqlite.Quote(alias, "user_id"),
-	}
-}
-
-type itemWhere[Q sqlite.Filterable] struct {
-	ID          sqlite.WhereMod[Q, int32]
-	Name        sqlite.WhereMod[Q, string]
-	Added       sqlite.WhereMod[Q, time.Time]
-	Description sqlite.WhereMod[Q, string]
-	Price       sqlite.WhereMod[Q, float32]
-	Quantity    sqlite.WhereMod[Q, int32]
-	UserID      sqlite.WhereMod[Q, int32]
-}
-
-func (itemWhere[Q]) AliasedAs(alias string) itemWhere[Q] {
-	return buildItemWhere[Q](buildItemColumns(alias))
-}
-
-func buildItemWhere[Q sqlite.Filterable](cols itemColumns) itemWhere[Q] {
-	return itemWhere[Q]{
-		ID:          sqlite.Where[Q, int32](cols.ID),
-		Name:        sqlite.Where[Q, string](cols.Name),
-		Added:       sqlite.Where[Q, time.Time](cols.Added),
-		Description: sqlite.Where[Q, string](cols.Description),
-		Price:       sqlite.Where[Q, float32](cols.Price),
-		Quantity:    sqlite.Where[Q, int32](cols.Quantity),
-		UserID:      sqlite.Where[Q, int32](cols.UserID),
-	}
-}
-
-var ItemErrors = &itemErrors{
-	ErrUniquePkMainItem: &UniqueConstraintError{
-		schema:  "",
-		table:   "item",
-		columns: []string{"id"},
-		s:       "pk_main_item",
-	},
-}
-
-type itemErrors struct {
-	ErrUniquePkMainItem *UniqueConstraintError
 }
 
 // ItemSetter is used for insert/upsert/update operations
@@ -310,20 +263,20 @@ func (s ItemSetter) Expressions(prefix ...string) []bob.Expression {
 func FindItem(ctx context.Context, exec bob.Executor, IDPK int32, cols ...string) (*Item, error) {
 	if len(cols) == 0 {
 		return Items.Query(
-			SelectWhere.Items.ID.EQ(IDPK),
+			sm.Where(Items.Columns.ID.EQ(sqlite.Arg(IDPK))),
 		).One(ctx, exec)
 	}
 
 	return Items.Query(
-		SelectWhere.Items.ID.EQ(IDPK),
-		sm.Columns(Items.Columns().Only(cols...)),
+		sm.Where(Items.Columns.ID.EQ(sqlite.Arg(IDPK))),
+		sm.Columns(Items.Columns.Only(cols...)),
 	).One(ctx, exec)
 }
 
 // ItemExists checks the presence of a single record by primary key
 func ItemExists(ctx context.Context, exec bob.Executor, IDPK int32) (bool, error) {
 	return Items.Query(
-		SelectWhere.Items.ID.EQ(IDPK),
+		sm.Where(Items.Columns.ID.EQ(sqlite.Arg(IDPK))),
 	).Exists(ctx, exec)
 }
 
@@ -378,7 +331,7 @@ func (o *Item) Delete(ctx context.Context, exec bob.Executor) error {
 // Reload refreshes the Item using the executor
 func (o *Item) Reload(ctx context.Context, exec bob.Executor) error {
 	o2, err := Items.Query(
-		SelectWhere.Items.ID.EQ(o.ID),
+		sm.Where(Items.Columns.ID.EQ(sqlite.Arg(o.ID))),
 	).One(ctx, exec)
 	if err != nil {
 		return err
@@ -528,39 +481,10 @@ func (o ItemSlice) ReloadAll(ctx context.Context, exec bob.Executor) error {
 	return nil
 }
 
-type itemJoins[Q dialect.Joinable] struct {
-	typ  string
-	User modAs[Q, userColumns]
-}
-
-func (j itemJoins[Q]) aliasedAs(alias string) itemJoins[Q] {
-	return buildItemJoins[Q](buildItemColumns(alias), j.typ)
-}
-
-func buildItemJoins[Q dialect.Joinable](cols itemColumns, typ string) itemJoins[Q] {
-	return itemJoins[Q]{
-		typ: typ,
-		User: modAs[Q, userColumns]{
-			c: UserColumns,
-			f: func(to userColumns) bob.Mod[Q] {
-				mods := make(mods.QueryMods[Q], 0, 1)
-
-				{
-					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
-						to.ID.EQ(cols.UserID),
-					))
-				}
-
-				return mods
-			},
-		},
-	}
-}
-
 // User starts a query for related objects on user
 func (o *Item) User(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	return Users.Query(append(mods,
-		sm.Where(UserColumns.ID.EQ(sqlite.Arg(o.UserID))),
+		sm.Where(Users.Columns.ID.EQ(sqlite.Arg(o.UserID))),
 	)...)
 }
 
@@ -572,8 +496,80 @@ func (os ItemSlice) User(mods ...bob.Mod[*dialect.SelectQuery]) UsersQuery {
 	PKArgExpr := sqlite.Group(PKArgSlice...)
 
 	return Users.Query(append(mods,
-		sm.Where(sqlite.Group(UserColumns.ID).OP("IN", PKArgExpr)),
+		sm.Where(sqlite.Group(Users.Columns.ID).OP("IN", PKArgExpr)),
 	)...)
+}
+
+func attachItemUser0(ctx context.Context, exec bob.Executor, count int, item0 *Item, user1 *User) (*Item, error) {
+	setter := &ItemSetter{
+		UserID: omit.From(user1.ID),
+	}
+
+	err := item0.Update(ctx, exec, setter)
+	if err != nil {
+		return nil, fmt.Errorf("attachItemUser0: %w", err)
+	}
+
+	return item0, nil
+}
+
+func (item0 *Item) InsertUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
+	user1, err := Users.Insert(related).One(ctx, exec)
+	if err != nil {
+		return fmt.Errorf("inserting related objects: %w", err)
+	}
+
+	_, err = attachItemUser0(ctx, exec, 1, item0, user1)
+	if err != nil {
+		return err
+	}
+
+	item0.R.User = user1
+
+	user1.R.Items = append(user1.R.Items, item0)
+
+	return nil
+}
+
+func (item0 *Item) AttachUser(ctx context.Context, exec bob.Executor, user1 *User) error {
+	var err error
+
+	_, err = attachItemUser0(ctx, exec, 1, item0, user1)
+	if err != nil {
+		return err
+	}
+
+	item0.R.User = user1
+
+	user1.R.Items = append(user1.R.Items, item0)
+
+	return nil
+}
+
+type itemWhere[Q sqlite.Filterable] struct {
+	ID          sqlite.WhereMod[Q, int32]
+	Name        sqlite.WhereMod[Q, string]
+	Added       sqlite.WhereMod[Q, time.Time]
+	Description sqlite.WhereMod[Q, string]
+	Price       sqlite.WhereMod[Q, float32]
+	Quantity    sqlite.WhereMod[Q, int32]
+	UserID      sqlite.WhereMod[Q, int32]
+}
+
+func (itemWhere[Q]) AliasedAs(alias string) itemWhere[Q] {
+	return buildItemWhere[Q](buildItemColumns(alias))
+}
+
+func buildItemWhere[Q sqlite.Filterable](cols itemColumns) itemWhere[Q] {
+	return itemWhere[Q]{
+		ID:          sqlite.Where[Q, int32](cols.ID),
+		Name:        sqlite.Where[Q, string](cols.Name),
+		Added:       sqlite.Where[Q, time.Time](cols.Added),
+		Description: sqlite.Where[Q, string](cols.Description),
+		Price:       sqlite.Where[Q, float32](cols.Price),
+		Quantity:    sqlite.Where[Q, int32](cols.Quantity),
+		UserID:      sqlite.Where[Q, int32](cols.UserID),
+	}
 }
 
 func (o *Item) Preload(name string, retrieved any) error {
@@ -606,21 +602,17 @@ type itemPreloader struct {
 func buildItemPreloader() itemPreloader {
 	return itemPreloader{
 		User: func(opts ...sqlite.PreloadOption) sqlite.Preloader {
-			return sqlite.Preload[*User, UserSlice](orm.Relationship{
+			return sqlite.Preload[*User, UserSlice](sqlite.PreloadRel{
 				Name: "User",
-				Sides: []orm.RelSide{
+				Sides: []sqlite.PreloadSide{
 					{
-						From: TableNames.Items,
-						To:   TableNames.Users,
-						FromColumns: []string{
-							ColumnNames.Items.UserID,
-						},
-						ToColumns: []string{
-							ColumnNames.Users.ID,
-						},
+						From:        Items,
+						To:          Users,
+						FromColumns: []string{"user_id"},
+						ToColumns:   []string{"id"},
 					},
 				},
-			}, Users.Columns().Names(), opts...)
+			}, Users.Columns.Names(), opts...)
 		},
 	}
 }
@@ -696,48 +688,31 @@ func (os ItemSlice) LoadUser(ctx context.Context, exec bob.Executor, mods ...bob
 	return nil
 }
 
-func attachItemUser0(ctx context.Context, exec bob.Executor, count int, item0 *Item, user1 *User) (*Item, error) {
-	setter := &ItemSetter{
-		UserID: omit.From(user1.ID),
-	}
-
-	err := item0.Update(ctx, exec, setter)
-	if err != nil {
-		return nil, fmt.Errorf("attachItemUser0: %w", err)
-	}
-
-	return item0, nil
+type itemJoins[Q dialect.Joinable] struct {
+	typ  string
+	User modAs[Q, userColumns]
 }
 
-func (item0 *Item) InsertUser(ctx context.Context, exec bob.Executor, related *UserSetter) error {
-	user1, err := Users.Insert(related).One(ctx, exec)
-	if err != nil {
-		return fmt.Errorf("inserting related objects: %w", err)
-	}
-
-	_, err = attachItemUser0(ctx, exec, 1, item0, user1)
-	if err != nil {
-		return err
-	}
-
-	item0.R.User = user1
-
-	user1.R.Items = append(user1.R.Items, item0)
-
-	return nil
+func (j itemJoins[Q]) aliasedAs(alias string) itemJoins[Q] {
+	return buildItemJoins[Q](buildItemColumns(alias), j.typ)
 }
 
-func (item0 *Item) AttachUser(ctx context.Context, exec bob.Executor, user1 *User) error {
-	var err error
+func buildItemJoins[Q dialect.Joinable](cols itemColumns, typ string) itemJoins[Q] {
+	return itemJoins[Q]{
+		typ: typ,
+		User: modAs[Q, userColumns]{
+			c: Users.Columns,
+			f: func(to userColumns) bob.Mod[Q] {
+				mods := make(mods.QueryMods[Q], 0, 1)
 
-	_, err = attachItemUser0(ctx, exec, 1, item0, user1)
-	if err != nil {
-		return err
+				{
+					mods = append(mods, dialect.Join[Q](typ, Users.Name().As(to.Alias())).On(
+						to.ID.EQ(cols.UserID),
+					))
+				}
+
+				return mods
+			},
+		},
 	}
-
-	item0.R.User = user1
-
-	user1.R.Items = append(user1.R.Items, item0)
-
-	return nil
 }

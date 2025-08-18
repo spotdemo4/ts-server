@@ -1,7 +1,29 @@
 wipe: true
+plugins_preset: 'all'
 
 sql:
   dialect: sqlite
   pattern: db/schema.sql
   pkgname: models
-  output: internal/models
+
+plugins:
+  dbinfo:
+    disabled: false
+    pkgname: 'dbinfo'
+    destination: 'internal/dbinfo'
+  enums:
+    disabled: false
+    pkgname: 'enums'
+    destination: 'internal/enums'
+  models:
+    disabled: false
+    pkgname: 'models'
+    destination: 'internal/models'
+  factory:
+    disabled: false
+    pkgname: 'factory'
+    destination: 'internal/factory'
+  dberrors:
+    disabled: false
+    pkgname: 'dberrors'
+    destination: 'internal/dberrors'
