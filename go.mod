@@ -3,7 +3,7 @@ module github.com/spotdemo4/ts-server
 go 1.24.1
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.6-20250625184727-c923a0c2a132.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.7-20250717185734-6c6e0d3c608e.1
 	connectrpc.com/connect v1.18.1
 	connectrpc.com/cors v0.1.0
 	connectrpc.com/validate v0.3.0
@@ -25,7 +25,7 @@ require (
 )
 
 require (
-	buf.build/go/protovalidate v0.13.1 // indirect
+	buf.build/go/protovalidate v0.14.0 // indirect
 	cel.dev/expr v0.24.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
