@@ -89,11 +89,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1753881041,
-        "narHash": "sha256-WUFIJxC9Djf8stYunO4da3j6C2N41B7x2QLVcoXtE+E=",
+        "lastModified": 1755516720,
+        "narHash": "sha256-VodbisoBAKOn0yyh/Ed9aY/vdvF2yQFDJtYuD3J5w+0=",
         "owner": "nix-community",
         "repo": "NUR",
-        "rev": "642736eaf8034e0e6efd722aa0cd07082cd37637",
+        "rev": "06942a0a88bfa9b3a6f46dfa82235f8f34fb331f",
         "type": "github"
       },
       "original": {
@@ -131,11 +131,11 @@
     "semgrep-rules_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1753466348,
-        "narHash": "sha256-ZMDAYXGSgCH+r3JTHCM7iq45WPoRqG/0gXG9Onp6dbw=",
+        "lastModified": 1754946323,
+        "narHash": "sha256-hGCoAy6Z7uz9w6d8N6/WxGk4lqA0UJVBToz0iXYvLKM=",
         "owner": "semgrep",
         "repo": "semgrep-rules",
-        "rev": "e9596407245754d555b9c1a35c50955251c34a46",
+        "rev": "2d37f9708a9a1aa09bf7c9f9845650c2611c8a93",
         "type": "github"
       },
       "original": {
@@ -183,17 +183,17 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1754920886,
-        "narHash": "sha256-gUWNEFSr3o/Z1OscGiJNTTfkOIHQMKwIWbHRkNn4ym0=",
+        "lastModified": 1755521591,
+        "narHash": "sha256-E9lde+6OXg8Apxkw1VxrivOPF9KD0DpRqHiEvRe69aU=",
         "ref": "latest",
-        "rev": "4c8efff5e22a449d44a24a05abbcc10b201499a1",
-        "revCount": 302,
+        "rev": "75f0c4c2e6046106bae34f4af403c5cfd06ca013",
+        "revCount": 329,
         "type": "git",
         "url": "https://github.com/spotdemo4/ts-web"
       },
       "original": {
         "ref": "latest",
-        "rev": "4c8efff5e22a449d44a24a05abbcc10b201499a1",
+        "rev": "75f0c4c2e6046106bae34f4af403c5cfd06ca013",
         "type": "git",
         "url": "https://github.com/spotdemo4/ts-web"
       }
