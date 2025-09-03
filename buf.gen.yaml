@@ -3,7 +3,7 @@ clean: true
 inputs:
   - git_repo: https://github.com/spotdemo4/ts-proto.git
     branch: main
-    ref: 0d216111c6368160198c12ed452cbfcb933fbfc8
+    ref: c1ed5a857f53f76fd519d43ccc5b1c958af2958b
 
 managed:
   enabled: true
