@@ -3,7 +3,7 @@ module github.com/spotdemo4/ts-server
 go 1.24.1
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.8-20250717185734-6c6e0d3c608e.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.9-20250717185734-6c6e0d3c608e.1
 	connectrpc.com/connect v1.18.1
 	connectrpc.com/cors v0.1.0
 	connectrpc.com/validate v0.3.0
@@ -20,7 +20,7 @@ require (
 	golang.org/x/crypto v0.42.0
 	golang.org/x/net v0.43.0
 	golang.org/x/time v0.13.0
-	google.golang.org/protobuf v1.36.8
+	google.golang.org/protobuf v1.36.9
 	modernc.org/sqlite v1.38.2
 )
 
