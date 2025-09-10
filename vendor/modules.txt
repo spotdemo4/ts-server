@@ -1,4 +1,4 @@
-# buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.8-20250717185734-6c6e0d3c608e.1
+# buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.9-20250717185734-6c6e0d3c608e.1
 ## explicit; go 1.23
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate
 # buf.build/go/protovalidate v0.14.0
@@ -188,7 +188,7 @@ google.golang.org/genproto/googleapis/api/expr/v1alpha1
 # google.golang.org/genproto/googleapis/rpc v0.0.0-20250721164621-a45f3dfb1074
 ## explicit; go 1.23.0
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/protobuf v1.36.8
+# google.golang.org/protobuf v1.36.9
 ## explicit; go 1.23
 google.golang.org/protobuf/encoding/protojson
 google.golang.org/protobuf/encoding/prototext
