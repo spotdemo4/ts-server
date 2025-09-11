@@ -18,7 +18,7 @@ require (
 	github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3
 	github.com/stephenafamo/bob v0.40.2
 	golang.org/x/crypto v0.42.0
-	golang.org/x/net v0.43.0
+	golang.org/x/net v0.44.0
 	golang.org/x/time v0.13.0
 	google.golang.org/protobuf v1.36.9
 	modernc.org/sqlite v1.38.2
