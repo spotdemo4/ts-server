@@ -9,7 +9,7 @@ require (
 	connectrpc.com/validate v0.3.0
 	github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65
 	github.com/amacneil/dbmate/v2 v2.28.0
-	github.com/go-webauthn/webauthn v0.13.4
+	github.com/go-webauthn/webauthn v0.14.0
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0
 	github.com/jaswdr/faker/v2 v2.8.0
@@ -30,7 +30,7 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
-	github.com/go-webauthn/x v0.1.23 // indirect
+	github.com/go-webauthn/x v0.1.25 // indirect
 	github.com/google/cel-go v0.25.0 // indirect
 	github.com/google/go-tpm v0.9.5 // indirect
 	github.com/lib/pq v1.10.9 // indirect
