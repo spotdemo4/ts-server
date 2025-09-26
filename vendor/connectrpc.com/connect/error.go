@@ -1,4 +1,4 @@
-// Copyright 2021-2024 The Connect Authors
+// Copyright 2021-2025 The Connect Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ func (d *ErrorDetail) Type() string {
 	//
 	// If we ever want to support remote registries, we can add an explicit
 	// `TypeURL` method.
-	return typeNameFromURL(d.pbAny.GetTypeUrl())
+	return typeNameForURL(d.pbAny.GetTypeUrl())
 }
 
 // Bytes returns a copy of the Protobuf-serialized detail.
@@ -459,6 +459,6 @@ func wrapIfMaxBytesError(err error, tmpl string, args ...any) error {
 	return errorf(CodeResourceExhausted, "%s: exceeded %d byte http.MaxBytesReader limit", prefix, maxBytesErr.Limit)
 }
 
-func typeNameFromURL(url string) string {
+func typeNameForURL(url string) string {
 	return url[strings.LastIndexByte(url, '/')+1:]
 }
