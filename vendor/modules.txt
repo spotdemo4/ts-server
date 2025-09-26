@@ -8,8 +8,8 @@ buf.build/go/protovalidate/cel
 # cel.dev/expr v0.24.0
 ## explicit; go 1.22.0
 cel.dev/expr
-# connectrpc.com/connect v1.18.1
-## explicit; go 1.21
+# connectrpc.com/connect v1.19.0
+## explicit; go 1.24.0
 connectrpc.com/connect
 connectrpc.com/connect/internal/gen/connectext/grpc/status/v1
 # connectrpc.com/cors v0.1.0

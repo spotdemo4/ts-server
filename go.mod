@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.9-20250912141014-52f32327d4b0.1
-	connectrpc.com/connect v1.18.1
+	connectrpc.com/connect v1.19.0
 	connectrpc.com/cors v0.1.0
 	connectrpc.com/validate v0.3.0
 	github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65
