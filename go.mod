@@ -19,7 +19,7 @@ require (
 	github.com/stephenafamo/bob v0.40.2
 	golang.org/x/crypto v0.43.0
 	golang.org/x/net v0.46.0
-	golang.org/x/time v0.13.0
+	golang.org/x/time v0.14.0
 	google.golang.org/protobuf v1.36.10
 	modernc.org/sqlite v1.39.0
 )
