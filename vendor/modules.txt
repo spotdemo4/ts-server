@@ -1,8 +1,8 @@
 # buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.10-20250912141014-52f32327d4b0.1
 ## explicit; go 1.23
 buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate
-# buf.build/go/protovalidate v0.14.0
-## explicit; go 1.23.0
+# buf.build/go/protovalidate v1.0.0
+## explicit; go 1.24.0
 buf.build/go/protovalidate
 buf.build/go/protovalidate/cel
 # cel.dev/expr v0.24.0
@@ -15,8 +15,8 @@ connectrpc.com/connect/internal/gen/connectext/grpc/status/v1
 # connectrpc.com/cors v0.1.0
 ## explicit; go 1.19
 connectrpc.com/cors
-# connectrpc.com/validate v0.3.0
-## explicit; go 1.23.0
+# connectrpc.com/validate v0.6.0
+## explicit; go 1.24.0
 connectrpc.com/validate
 # github.com/aarondl/opt v0.0.0-20250607033636-982744e1bd65
 ## explicit; go 1.24
@@ -51,7 +51,7 @@ github.com/go-webauthn/x/revoke
 # github.com/golang-jwt/jwt/v5 v5.3.0
 ## explicit; go 1.21
 github.com/golang-jwt/jwt/v5
-# github.com/google/cel-go v0.25.0
+# github.com/google/cel-go v0.26.1
 ## explicit; go 1.22.0
 github.com/google/cel-go/cel
 github.com/google/cel-go/checker
@@ -145,8 +145,8 @@ github.com/x448/float16
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/ocsp
-# golang.org/x/exp v0.0.0-20250718183923-645b1fa84792
-## explicit; go 1.23.0
+# golang.org/x/exp v0.0.0-20250911091902-df9299821621
+## explicit; go 1.24.0
 golang.org/x/exp/constraints
 golang.org/x/exp/slices
 # golang.org/x/net v0.46.0
@@ -182,11 +182,11 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.14.0
 ## explicit; go 1.24.0
 golang.org/x/time/rate
-# google.golang.org/genproto/googleapis/api v0.0.0-20250721164621-a45f3dfb1074
-## explicit; go 1.23.0
+# google.golang.org/genproto/googleapis/api v0.0.0-20250922171735-9219d122eba9
+## explicit; go 1.24.0
 google.golang.org/genproto/googleapis/api/expr/v1alpha1
-# google.golang.org/genproto/googleapis/rpc v0.0.0-20250721164621-a45f3dfb1074
-## explicit; go 1.23.0
+# google.golang.org/genproto/googleapis/rpc v0.0.0-20250922171735-9219d122eba9
+## explicit; go 1.24.0
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/protobuf v1.36.10
 ## explicit; go 1.23
