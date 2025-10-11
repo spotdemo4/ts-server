@@ -16,7 +16,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/cors v1.11.1
 	github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3
-	github.com/stephenafamo/bob v0.40.2
+	github.com/stephenafamo/bob v0.41.1
 	golang.org/x/crypto v0.43.0
 	golang.org/x/net v0.46.0
 	golang.org/x/time v0.14.0
