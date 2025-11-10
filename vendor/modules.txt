@@ -116,7 +116,7 @@ github.com/rs/cors/internal
 # github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3
 ## explicit; go 1.24.1
 github.com/spotdemo4/dbmate-sqlite-modernc/pkg/driver/sqlite
-# github.com/stephenafamo/bob v0.40.2
+# github.com/stephenafamo/bob v0.41.1
 ## explicit; go 1.24.0
 github.com/stephenafamo/bob
 github.com/stephenafamo/bob/clause
