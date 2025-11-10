@@ -91,6 +91,8 @@ github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3 h1:U/mix+tE4j8pJPENtXAMmUxHo6v
 github.com/spotdemo4/dbmate-sqlite-modernc v0.0.3/go.mod h1:JwuvDDgb1VLGyHgSsQN3I+dx6QkEGk86o6Yc8vxzG/4=
 github.com/stephenafamo/bob v0.40.2 h1:VNb25TmDFuqxpRoP1ZjsFURs/t7/10LWkpDM+KovV6M=
 github.com/stephenafamo/bob v0.40.2/go.mod h1:8l55917DM36gF518Iz1MHjLds7KGAfkitJfxISYlth8=
+github.com/stephenafamo/bob v0.41.1 h1:xcRPuRMCwtZZ9tS4JIVbZ5Erdm5Dy5dIvbS5kivwPpA=
+github.com/stephenafamo/bob v0.41.1/go.mod h1:8l55917DM36gF518Iz1MHjLds7KGAfkitJfxISYlth8=
 github.com/stephenafamo/fakedb v0.0.0-20221230081958-0b86f816ed97 h1:XItoZNmhOih06TC02jK7l3wlpZ0XT/sPQYutDcGOQjg=
 github.com/stephenafamo/fakedb v0.0.0-20221230081958-0b86f816ed97/go.mod h1:bM3Vmw1IakoaXocHmMIGgJFYob0vuK+CFWiJHQvz0jQ=
 github.com/stephenafamo/scan v0.7.0 h1:lfFiD9H5+n4AdK3qNzXQjj2M3NfTOpmWBIA39NwB94c=
